@@ -1,0 +1,117 @@
+/* SIMCARD design tokens. Primitives are named by value, semantic tokens by
+   role; components only reference the semantic tier. The accent tier is
+   rewritten per NFT from its artwork (see SimCard.tsx / palette). */
+
+@font-face {
+  font-family: 'JetBrains Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url('@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: dark;
+
+  /* Primitives: neutral ramp (graphite, slightly cool) */
+  --graphite-950: #060608;
+  --graphite-900: #0b0b0f;
+  --graphite-850: #101014;
+  --graphite-800: #15151b;
+  --graphite-700: #1c1c24;
+  --graphite-600: #2a2a34;
+  --graphite-400: #83838f; /* 5.4:1 on graphite-950, 4.5:1 on graphite-700 (measured) */
+  --graphite-300: #9a9aa6;
+  --graphite-200: #c9c9d2;
+  --graphite-100: #ececf1;
+
+  /* Primitives: status hues */
+  --green-400: #4ade80;
+  --amber-400: #fbbf24;
+  --red-400: #f87171;
+
+  /* Semantic: surfaces */
+  --color-bg-page: var(--graphite-950);
+  --color-bg-graphite: var(--graphite-900);
+  --color-bg-surface: var(--graphite-850);
+  --color-bg-raised: var(--graphite-800);
+  --color-bg-hover: var(--graphite-700);
+  --color-border-subtle: rgb(255 255 255 / 0.08);
+  --color-border-strong: rgb(255 255 255 / 0.16);
+  --color-image-outline: rgb(255 255 255 / 0.1);
+
+  /* Semantic: text */
+  --color-text-primary: var(--graphite-100);
+  --color-text-secondary: var(--graphite-300);
+  --color-text-muted: var(--graphite-400);
+  --color-text-inverse: var(--graphite-950);
+
+  /* Semantic: accent (overridden per NFT) */
+  --color-accent: #22d3ee;
+  --color-accent-2: #a78bfa;
+  --color-accent-3: #67e8f9;
+  --color-accent-text: #67e8f9;
+  --color-accent-glow: rgb(34 211 238 / 0.35);
+
+  /* Semantic: status */
+  --color-status-ready: var(--green-400);
+  --color-status-working: var(--amber-400);
+  --color-status-offline: var(--graphite-400);
+  --color-status-unknown: var(--graphite-300);
+  --color-danger: var(--red-400);
+
+  /* Focus ring: verified visible on every dark surface here */
+  --color-focus: #ffffff;
+
+  /* Typography */
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+  --text-xs: 0.75rem; /* 12px labels, captions */
+  --text-sm: 0.8125rem; /* 13px secondary UI */
+  --text-md: 0.875rem; /* 14px UI default */
+  --text-base: 1rem; /* 16px body, inputs */
+  --text-lg: 1.25rem; /* 20px h3 */
+  --text-xl: 1.625rem; /* 26px h2 */
+  --text-2xl: clamp(2rem, 1.2rem + 3vw, 3.25rem); /* h1 */
+  --leading-tight: 1.1;
+  --leading-snug: 1.3;
+  --leading-body: 1.55;
+  --tracking-label: 0.08em;
+  --tracking-heading: -0.02em;
+
+  /* Spacing (4px base) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  /* Shape */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-card: 20px;
+  --radius-pill: 999px;
+
+  /* Elevation */
+  --shadow-raised: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 8px 24px rgb(0 0 0 / 0.45);
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 24px 60px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.06);
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 150ms;
+  --duration-base: 240ms;
+  --orbit-duration: 24s;
+  --pulse-duration: 3.2s;
+  --scan-duration: 6s;
+  --card-dim: 1;
+
+  /* Layout */
+  --content-max: 72rem;
+  --measure: 64ch;
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+}

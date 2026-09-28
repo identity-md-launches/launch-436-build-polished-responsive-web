@@ -1,0 +1,30 @@
+{
+  "name": "simcard",
+  "private": true,
+  "version": "1.0.0",
+  "description": "SIMCARD: animated identity cards for IdentityMD agents, built from public API and onchain data.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "snapshot": "node scripts/snapshot.mjs",
+    "check": "npm run typecheck && npm run build"
+  },
+  "dependencies": {
+    "@noble/hashes": "^1.8.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.5.0",
+    "typescript": "^5.8.0",
+    "vite": "^6.3.0"
+  }
+}
