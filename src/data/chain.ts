@@ -1,11 +1,11 @@
-// Read-only Ethereum access with hand-rolled ABI encoding. Only `eth_call` is
-// ever sent; there is no signer, no wallet provider and no transaction path.
+// Read-only Ethereum access with hand-rolled ABI encoding. Calls, blocks and
+// logs never need a signer, wallet provider or transaction submission.
 
 import { keccak_256 } from '@noble/hashes/sha3';
 import { COLLECTION_ADDRESS, ENS_REGISTRY, RPC_ENDPOINTS } from './config';
 import { HttpError, postJson } from './http';
 
-type RpcResponse = { id: number; result?: string; error?: { code: number; message: string } };
+type RpcResponse<T = string> = { id: number; result?: T; error?: { code: number; message: string } };
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -75,9 +75,13 @@ export function namehash(name: string): string {
 export interface Call {
   to: string;
   data: string;
+  validate?: (result: string) => boolean;
 }
 
-/** Batched eth_call against the first browser-safe RPC that answers. */
+/**
+ * Batched eth_call against the first usable RPC. Only an explicit EVM revert
+ * becomes null; an incomplete batch or service error retries another endpoint.
+ */
 export async function ethCallBatch(calls: Call[]): Promise<(string | null)[]> {
   const body = calls.map((call, i) => ({
     jsonrpc: '2.0',
@@ -91,9 +95,12 @@ export async function ethCallBatch(calls: Call[]): Promise<(string | null)[]> {
       const responses = await postJson<RpcResponse[] | RpcResponse>(endpoint, body);
       const list = Array.isArray(responses) ? responses : [responses];
       const byId = new Map(list.map((r) => [r.id, r]));
-      return calls.map((_, i) => {
+      return calls.map((call, i) => {
         const r = byId.get(i + 1);
-        return r && typeof r.result === 'string' ? r.result : null;
+        if (r?.error && /(?:\bexecution reverted\b|\bVM Exception\b.*\brevert(?:ed)?\b)/i.test(r.error.message)) return null;
+        if (r?.error || typeof r?.result !== 'string' || !/^0x(?:[0-9a-f]{2})*$/i.test(r.result) ||
+          (call.validate && !call.validate(r.result))) throw new Error('Incomplete or failed RPC call');
+        return r.result;
       });
     } catch (error) {
       lastError = error;
@@ -126,7 +133,14 @@ export interface OnchainToken {
 export async function readToken(tokenId: number): Promise<OnchainToken> {
   const id = encodeUint(tokenId);
   const results = await ethCallBatch([
-    { to: COLLECTION_ADDRESS, data: SEL.ownerOf + id },
+    {
+      to: COLLECTION_ADDRESS,
+      data: SEL.ownerOf + id,
+      // ERC-721 ownerOf either returns one nonzero address word or reverts.
+      // Empty/zero/malformed success results are provider failures, not proof
+      // that this token is unminted.
+      validate: (result) => /^0x0{24}[0-9a-f]{40}$/i.test(result) && !/^0x0{64}$/i.test(result),
+    },
     { to: COLLECTION_ADDRESS, data: SEL.tokenURI + id },
     { to: COLLECTION_ADDRESS, data: SEL.hasIdentityHash + id },
     { to: COLLECTION_ADDRESS, data: SEL.identityHash + id },
@@ -134,15 +148,192 @@ export async function readToken(tokenId: number): Promise<OnchainToken> {
     { to: COLLECTION_ADDRESS, data: SEL.totalSupply },
   ]);
   const [owner, uri, hasHash, hash, locked, supply] = results;
-  const ownerAddress = owner && owner.length >= 66 ? decodeAddress(owner) : null;
+  const ownerAddress = owner ? decodeAddress(owner) : null;
   return {
-    owner: ownerAddress && ownerAddress !== '0x0000000000000000000000000000000000000000' ? ownerAddress : null,
+    owner: ownerAddress,
     tokenURI: uri && uri.length > 130 ? decodeString(uri) : null,
     hasIdentityHash: hasHash ? decodeBool(hasHash) : null,
     identityHash: hash && hash.length > 130 ? decodeString(hash) : null,
     identityHashLocked: locked ? decodeBool(locked) : null,
     totalSupply: supply ? Number(decodeUint(supply)) : null,
   };
+}
+
+export interface Acquisition {
+  acquiredAt: string;
+  transactionHash: string;
+  blockNumber: number;
+  blockHash: string;
+  owner: string;
+  verifiedAtBlock: number;
+}
+
+interface RpcBlock {
+  number: string;
+  hash: string;
+  timestamp: string;
+}
+
+interface TransferLog {
+  address: string;
+  topics: string[];
+  blockNumber: string;
+  blockHash: string;
+  transactionHash: string;
+  logIndex: string;
+  removed: boolean;
+}
+
+const TRANSFER_TOPIC = '0x' + keccakHex('Transfer(address,address,uint256)');
+const HASH_PATTERN = /^0x[0-9a-f]{64}$/i;
+const QUANTITY_PATTERN = /^0x[0-9a-f]+$/i;
+const ACQUISITION_BUDGET_MS = 25_000;
+const ACQUISITION_MAX_REQUESTS = 64;
+
+class RpcReadError extends Error {}
+
+function quantity(value: unknown): number {
+  if (typeof value !== 'string' || !QUANTITY_PATTERN.test(value)) throw new Error('Invalid RPC quantity');
+  const n = Number(BigInt(value));
+  if (!Number.isSafeInteger(n) || n < 0) throw new Error('Invalid RPC quantity');
+  return n;
+}
+
+function blockData(value: RpcBlock | null): RpcBlock {
+  if (!value || !HASH_PATTERN.test(value.hash)) throw new Error('Missing canonical block');
+  quantity(value.number);
+  quantity(value.timestamp);
+  return value;
+}
+
+function latestTransfer(logs: unknown, tokenTopic: string, fromBlock: number, toBlock: number): TransferLog | null {
+  if (!Array.isArray(logs)) throw new Error('Invalid logs response');
+  let latest: TransferLog | null = null;
+  for (const entry of logs) {
+    const log = entry as TransferLog | null;
+    // Reject an inconsistent result instead of silently ignoring a possibly
+    // newer transfer. ERC-721 has four indexed topics, unlike ERC-20 Transfer.
+    if (!log || log.address?.toLowerCase() !== COLLECTION_ADDRESS.toLowerCase() || log.removed !== false ||
+      !Array.isArray(log.topics) || log.topics.length !== 4 ||
+      log.topics.some((topic) => typeof topic !== 'string' || !HASH_PATTERN.test(topic)) ||
+      log.topics[0]?.toLowerCase() !== TRANSFER_TOPIC || log.topics[3]?.toLowerCase() !== tokenTopic ||
+      !HASH_PATTERN.test(log.blockHash) || !HASH_PATTERN.test(log.transactionHash)) {
+      throw new Error('Unverifiable Transfer log');
+    }
+    const block = quantity(log.blockNumber);
+    const index = quantity(log.logIndex);
+    if (block < fromBlock || block > toBlock) throw new Error('Transfer outside requested range');
+    if (!latest || block > quantity(latest.blockNumber) ||
+      (block === quantity(latest.blockNumber) && index > quantity(latest.logIndex))) latest = log;
+  }
+  return latest;
+}
+
+/**
+ * Find the latest ERC-721 Transfer for this exact NFT, then verify its recipient
+ * against ownerOf at one pinned Ethereum head. Newer ranges must all be checked
+ * before an older event can be used. The timestamp comes only from that event's
+ * canonical block, never from pairing, API activity or a snapshot.
+ *
+ * Public RPC history limits vary: try the complete range, then contiguous
+ * backwards windows (50,000 down to 1,000 blocks). A 25-second / 64-request
+ * overall budget keeps a static page usable. Unscanned history, a reorg, an
+ * ownership race, advancing head, or a failed proof returns null; callers show
+ * Unavailable. The final head must still match even if ownerOf is unchanged:
+ * a transfer away and back, or a self-transfer, also resets acquisition time.
+ */
+export async function readAcquisition(tokenId: number, owner: string): Promise<Acquisition | null> {
+  if (!Number.isSafeInteger(tokenId) || tokenId < 0 || !/^0x[0-9a-f]{40}$/i.test(owner) || /^0x0{40}$/i.test(owner)) return null;
+  const expectedOwner = owner.toLowerCase();
+  const tokenTopic = '0x' + encodeUint(tokenId);
+  const deadline = Date.now() + ACQUISITION_BUDGET_MS;
+  let requests = 0;
+
+  for (const endpoint of RPC_ENDPOINTS) {
+    const request = async <T,>(method: string, params: unknown[]): Promise<T> => {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0 || requests >= ACQUISITION_MAX_REQUESTS) throw new Error('Acquisition lookup budget reached');
+      requests += 1;
+      const id = requests;
+      const response = await postJson<RpcResponse<T>>(
+        endpoint, { jsonrpc: '2.0', id, method, params }, Math.min(6_000, remaining),
+      );
+      if (response.error) throw new RpcReadError(response.error.message);
+      if (response.id !== id || response.result === undefined) throw new Error('Incomplete RPC response');
+      return response.result;
+    };
+    try {
+      const [chainId, headResult] = await Promise.all([
+        request<string>('eth_chainId', []),
+        request<RpcBlock | null>('eth_getBlockByNumber', ['latest', false]),
+      ]);
+      if (quantity(chainId) !== 1) throw new Error('Not Ethereum mainnet');
+      const head = blockData(headResult);
+      const headNumber = quantity(head.number);
+      const ownerAtHead = await request<string>('eth_call', [
+        { to: COLLECTION_ADDRESS, data: SEL.ownerOf + encodeUint(tokenId) }, head.number,
+      ]);
+      if (!HASH_PATTERN.test(ownerAtHead) || decodeAddress(ownerAtHead).toLowerCase() !== expectedOwner) return null;
+
+      const getLogs = (from: number, to: number) => request<unknown>('eth_getLogs', [{
+        address: COLLECTION_ADDRESS,
+        topics: [TRANSFER_TOPIC, null, null, tokenTopic],
+        fromBlock: '0x' + from.toString(16),
+        toBlock: '0x' + to.toString(16),
+      }]);
+      let event: TransferLog | null = null;
+      try {
+        event = latestTransfer(await getLogs(0, headNumber), tokenTopic, 0, headNumber);
+        if (!event) return null;
+      } catch (error) {
+        // A JSON-RPC range rejection can be repaired with smaller windows.
+        // Transport errors or invalid proof data instead try the next RPC.
+        if (!(error instanceof RpcReadError)) throw error;
+        let to = headNumber;
+        let span = 50_000;
+        while (to >= 0 && !event) {
+          const from = Math.max(0, to - span + 1);
+          try {
+            event = latestTransfer(await getLogs(from, to), tokenTopic, from, to);
+            to = from - 1;
+          } catch (windowError) {
+            if (!(windowError instanceof RpcReadError) || span <= 1_000) throw windowError;
+            span = Math.max(1_000, Math.floor(span / 2));
+          }
+        }
+        if (!event) return null;
+      }
+
+      if (decodeAddress(event.topics[2] ?? '').toLowerCase() !== expectedOwner) return null;
+      const [acquisitionResult, currentOwner] = await Promise.all([
+        request<RpcBlock | null>('eth_getBlockByNumber', [event.blockNumber, false]),
+        request<string>('eth_call', [{ to: COLLECTION_ADDRESS, data: SEL.ownerOf + encodeUint(tokenId) }, 'latest']),
+      ]);
+      const acquisitionBlock = blockData(acquisitionResult);
+      // Read the final head after the proof and owner check, so an intervening
+      // new block cannot conceal a newer receipt to the same owner.
+      const confirmedHead = blockData(await request<RpcBlock | null>('eth_getBlockByNumber', ['latest', false]));
+      if (acquisitionBlock.hash.toLowerCase() !== event.blockHash.toLowerCase() ||
+        quantity(acquisitionBlock.number) !== quantity(event.blockNumber) ||
+        confirmedHead.hash.toLowerCase() !== head.hash.toLowerCase() ||
+        quantity(confirmedHead.number) !== headNumber ||
+        !HASH_PATTERN.test(currentOwner) || decodeAddress(currentOwner).toLowerCase() !== expectedOwner) return null;
+      const timestamp = quantity(acquisitionBlock.timestamp);
+      if (timestamp > quantity(head.timestamp) || timestamp > Date.now() / 1_000 + 60) return null;
+      return {
+        acquiredAt: new Date(timestamp * 1_000).toISOString(),
+        transactionHash: event.transactionHash,
+        blockNumber: quantity(event.blockNumber),
+        blockHash: event.blockHash,
+        owner: expectedOwner,
+        verifiedAtBlock: headNumber,
+      };
+    } catch {
+      // Failure never promotes an incomplete log search to a date estimate.
+      if (Date.now() >= deadline || requests >= ACQUISITION_MAX_REQUESTS) break;
+    }
+  }
+  return null;
 }
 
 export interface EnsResult {

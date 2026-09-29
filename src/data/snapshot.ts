@@ -3,25 +3,30 @@
 
 import { cached } from './cache';
 import { getJson } from './http';
+import type { SeatRuntime, SeatWorkItem, SeatReview } from './imdApi';
 
 export interface SnapshotSeat {
   agentId: string | null;
-  attempts: number;
-  accepted: number;
-  rejected: number;
-  failed: number;
-  pending: number;
+  attempts: number | null;
+  accepted: number | null;
+  rejected: number | null;
+  failed: number | null;
+  pending: number | null;
   lastWorkedAt: string | null;
   owner: string | null;
   ownerName: string | null;
-  held: number | null;
   online: boolean | null;
+  detailsAt?: string;
+  runtimes?: SeatRuntime[];
+  work?: SeatWorkItem[];
+  reviews?: SeatReview[];
 }
 
 export interface SeatsSnapshot {
   generatedAt: string;
   sources: string[];
   count: number;
+  cohortComplete?: boolean;
   seats: Record<string, SnapshotSeat>;
 }
 
@@ -45,6 +50,7 @@ export interface SnapshotWallet {
   byKind: Record<string, number>;
   byStatus: Record<string, number>;
   latest: SnapshotAllocation[];
+  complete?: boolean;
 }
 
 export interface EarningsSnapshot {

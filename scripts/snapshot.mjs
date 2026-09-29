@@ -9,6 +9,7 @@
 // every value with its provenance and the snapshot time.
 //
 // Routes used (all public, no auth):
+//   GET https://api.imd.fun/seats/:tokenId
 //   GET https://api.imd.fun/seats/records
 //   GET https://explorer.imd.fun/api/agents/:tokenId
 //   GET https://api.imd.fun/wallets/:address/earnings
@@ -71,15 +72,18 @@ async function mapLimit(items, limit, fn) {
 // plus the newest allocations; the live API still serves the full list.
 function summarizeEarnings(payload) {
   if (!payload || !Array.isArray(payload.earnings)) return null;
+  const entries = payload.earnings.filter((e) => e && typeof e.launchId === 'string' && Number.isSafeInteger(e.chainId)
+    && typeof e.amount === 'string' && /^\d+$/.test(e.amount)
+    && Number.isSafeInteger(e.token?.decimals) && e.token.decimals >= 0 && e.token.decimals <= 255);
   const byChain = {};
   const byKind = {};
   const byStatus = {};
-  for (const e of payload.earnings) {
+  for (const e of entries) {
     byChain[e.chainId] = (byChain[e.chainId] ?? 0) + 1;
     byKind[e.kind] = (byKind[e.kind] ?? 0) + 1;
     byStatus[e.status] = (byStatus[e.status] ?? 0) + 1;
   }
-  const latest = [...payload.earnings]
+  const latest = [...entries]
     .sort((a, b) => String(b.at).localeCompare(String(a.at)))
     .slice(0, LATEST_PER_WALLET)
     .map((e) => ({
@@ -91,11 +95,11 @@ function summarizeEarnings(payload) {
       symbol: e.token?.symbol ?? null,
       name: e.token?.name ?? null,
       address: e.token?.address ?? null,
-      decimals: e.token?.decimals ?? 18,
-      amount: String(e.amount ?? '0'),
+      decimals: e.token.decimals,
+      amount: e.amount,
       at: e.at,
     }));
-  return { count: payload.count ?? payload.earnings.length, byChain, byKind, byStatus, latest };
+  return { count: entries.length, byChain, byKind, byStatus, latest, complete: payload.next == null && entries.length === payload.earnings.length };
 }
 
 async function main() {
@@ -108,6 +112,7 @@ async function main() {
 
   const seats = {};
   let explorerFailures = 0;
+  let detailFailures = 0;
   await mapLimit(seatList, CONCURRENCY, async (seat, i) => {
     let explorer = null;
     try {
@@ -118,18 +123,36 @@ async function main() {
     }
     seats[seat.tokenId] = {
       agentId: seat.agentId ?? null,
-      attempts: seat.attempts ?? 0,
-      accepted: seat.accepted ?? 0,
-      rejected: seat.rejected ?? 0,
-      failed: seat.failed ?? 0,
-      pending: seat.pending ?? 0,
+      attempts: seat.attempts ?? null,
+      accepted: seat.accepted ?? null,
+      rejected: seat.rejected ?? null,
+      failed: seat.failed ?? null,
+      pending: seat.pending ?? null,
       lastWorkedAt: seat.lastWorkedAt ?? null,
       owner: explorer?.owner ?? null,
       ownerName: explorer?.ownerName ?? null,
-      held: typeof explorer?.held === 'number' ? explorer.held : null,
       online: typeof explorer?.online === 'boolean' ? explorer.online : null,
     };
-    if ((i + 1) % 50 === 0) console.log(`[snapshot] explorer ${i + 1}/${seatList.length}`);
+    try {
+      const detail = await getJson(`${API}/seats/${seat.tokenId}`);
+      if (detail && String(detail.tokenId) === String(seat.tokenId)) {
+        const row = seats[seat.tokenId];
+        row.detailsAt = new Date().toISOString();
+        if (Array.isArray(detail.runtimes)) row.runtimes = detail.runtimes.map((r) => ({ id: r.id, version: r.version, premiumModel: r.premiumModel }));
+        if (Array.isArray(detail.work)) row.work = detail.work.slice(0, 3).map((w) => ({
+          jobId: w.jobId, objective: typeof w.objective === 'string' ? w.objective.slice(0, 180) : undefined,
+          status: w.status, submittedAt: w.submittedAt, acceptedAt: w.acceptedAt,
+        }));
+        if (Array.isArray(detail.reviews)) row.reviews = detail.reviews.slice(0, 3).map((r) => ({
+          jobId: r.jobId, verdict: r.verdict, value: r.value, status: r.status,
+          txHash: r.txHash, chainId: r.chainId, sentAt: r.sentAt,
+        }));
+      }
+    } catch (error) {
+      detailFailures += 1;
+      console.warn(`[snapshot] details ${seat.tokenId}: ${error.message}`);
+    }
+    if ((i + 1) % 50 === 0) console.log(`[snapshot] explorer + details ${i + 1}/${seatList.length}`);
   });
 
   const wallets = [...new Set(Object.values(seats).map((s) => s.owner).filter(Boolean))];
@@ -151,8 +174,9 @@ async function main() {
   await mkdir(OUT_DIR, { recursive: true });
   const seatsFile = {
     generatedAt,
-    sources: [`${API}/seats/records`, `${EXPLORER}/api/agents/:tokenId`],
+    sources: [`${API}/seats/records`, `${API}/seats/:tokenId`, `${EXPLORER}/api/agents/:tokenId`],
     count: Object.keys(seats).length,
+    cohortComplete: seatList.length === records.count,
     seats,
   };
   const earningsFile = {
@@ -164,7 +188,7 @@ async function main() {
   await writeFile(path.join(OUT_DIR, 'seats.json'), JSON.stringify(seatsFile));
   await writeFile(path.join(OUT_DIR, 'earnings.json'), JSON.stringify(earningsFile));
   console.log(
-    `[snapshot] wrote ${OUT_DIR}/seats.json (${Object.keys(seats).length} seats, ${explorerFailures} explorer failures) ` +
+    `[snapshot] wrote ${OUT_DIR}/seats.json (${Object.keys(seats).length} seats, ${explorerFailures} explorer failures, ${detailFailures} detail failures) ` +
       `and earnings.json (${Object.keys(earnings).length} wallets, ${earningsFailures} failures) at ${generatedAt}`,
   );
 }

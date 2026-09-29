@@ -50,7 +50,7 @@ export function AgentPage({ tokenId, onSnapshotAt }: Props) {
     return (
       <div className="container">
         <section className="state state--error" aria-labelledby="error-title">
-          <h2 id="error-title">{titles[state.code] ?? titles.unknown}</h2>
+          <h1 id="error-title" className="page-title">{titles[state.code] ?? titles.unknown}</h1>
           <p role="alert">{state.message}</p>
           <div className="state__actions">
             <button type="button" className="btn btn--primary" onClick={refresh}>
@@ -85,6 +85,8 @@ function LoadedAgent({ profile, shareUrl, refreshing, errorMessage, onRefresh }:
   const openButtonRef = useRef<HTMLButtonElement>(null);
   const toast = useToast();
   const reducedMotion = useReducedMotion();
+  const [motionPaused, setMotionPaused] = useState(false);
+  const paused = reducedMotion || motionPaused;
   const videoSupported = pickVideoMime() !== null;
 
   // Page-level accent follows the NFT palette.
@@ -134,14 +136,9 @@ function LoadedAgent({ profile, shareUrl, refreshing, errorMessage, onRefresh }:
     }
   };
 
-  const apiNote =
-    profile.apiStatus === 'live'
-      ? null
-      : profile.apiStatus === 'offline'
-        ? 'You appear to be offline. Showing cached and snapshot values.'
-        : profile.apiStatus === 'blocked'
-          ? `The official API blocks cross-origin browser requests, so work stats come from the snapshot${profile.snapshotAt ? ` taken ${formatDateTime(profile.snapshotAt)}` : ''} and live presence is unavailable. Artwork, ownership and ENS are read directly from Ethereum.`
-          : 'The official API returned an error. Some values may be unavailable.';
+  const apiNote = profile.apiStatus === 'live' ? null
+    : profile.apiStatus === 'offline' ? 'Offline. Snapshot values are labeled with their capture time.'
+    : 'Some official sources could not be read. Showing dated snapshots where available; Refresh retries live data.';
 
   return (
     <div className="container agent-layout">
@@ -159,8 +156,9 @@ function LoadedAgent({ profile, shareUrl, refreshing, errorMessage, onRefresh }:
             Artwork <SourceTag source={profile.artwork.source} at={profile.artwork.at} note={profile.artwork.note} />
           </span>
         </div>
-        <SimCard model={model} onOpen={() => setDialogOpen(true)} staticRender={reducedMotion} />
-        {apiNote ? <p className="note note--warn">{apiNote}</p> : null}
+        <SimCard model={model} onOpen={() => setDialogOpen(true)} staticRender={paused || dialogOpen} />
+        <div className="cluster"><button type="button" className="btn btn--sm" onClick={() => setMotionPaused(p => !p)} disabled={reducedMotion}>{paused ? 'Resume animation' : 'Pause animation'}</button>{apiNote ? <p className="note">{apiNote}</p> : null}</div>
+        {profile.seat.source === 'snapshot' && profile.seat.at ? <p className="note">Snapshot captured <time dateTime={profile.seat.at}>{formatDateTime(profile.seat.at)}</time></p> : null}
         {reducedMotion ? <p className="note">Card animation is paused because your system prefers reduced motion. Exports still animate.</p> : null}
       </div>
 
@@ -215,7 +213,7 @@ function LoadedAgent({ profile, shareUrl, refreshing, errorMessage, onRefresh }:
         </section>
       </aside>
 
-      <ProfileDialog profile={profile} model={model} open={dialogOpen} onClose={closeDialog} />
+      <ProfileDialog profile={profile} model={model} open={dialogOpen} onClose={closeDialog} onRefresh={onRefresh} refreshing={refreshing} paused={paused} onToggleMotion={() => setMotionPaused(p => !p)} reducedMotion={reducedMotion} errorMessage={errorMessage} />
       <Toast message={toast.message} kind={toast.kind} onDismiss={toast.clear} />
     </div>
   );

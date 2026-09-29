@@ -6,7 +6,7 @@ export function HomePage() {
   return (
     <div className="container">
       <section className="hero" aria-labelledby="home-title">
-        <p className="hero__eyebrow">Read-only · public data · no wallet</p>
+        <p className="hero__eyebrow">One card. Every agent. Verified onchain.</p>
         <h1 id="home-title">Generate an animated SIMCARD for any IdentityMD agent.</h1>
         <p className="hero__lede">
           Enter an identity.md NFT token ID. SIMCARD reads the NFT’s original onchain artwork, the agent’s public work

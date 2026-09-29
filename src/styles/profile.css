@@ -1,0 +1,94 @@
+/* The dashboard shares the existing cyber identity, with a brighter surface ramp. */
+.profile-dialog {
+  --color-bg-graphite: #1b2028;
+  --color-bg-surface: #252c36;
+  --color-bg-raised: #2d3541;
+  --color-bg-hover: #35404e;
+  --color-border-subtle: #3d4857;
+  --color-border-strong: #59677b;
+  --color-text-primary: #f4f6fa;
+  --color-text-secondary: #c1cad6;
+  --color-text-muted: #a9b5c5;
+  --color-accent-text: var(--color-accent);
+  width: min(100% - 2rem, 76rem);
+  max-height: calc(100dvh - 2rem);
+  background: var(--color-bg-graphite);
+}
+.profile-dialog__header { padding: 1.25rem 2rem; background: var(--color-bg-graphite); }
+.profile-dialog__header h2 { font-size: clamp(1.5rem, 2.8vw, 2rem); margin-top: .5rem; line-height: 1.25; }
+.profile-dialog__header h2 span { color: var(--color-accent-text); }
+.profile-dialog__header .btn { flex-shrink: 0; }
+.profile-dialog__body { padding: 2rem; gap: 2rem; }
+.profile-eyebrow { display: block; font-size: var(--text-xs); color: var(--color-text-secondary); letter-spacing: .09em; text-transform: uppercase; }
+.profile-overview { display: grid; gap: 1rem; width: 100%; max-width: 44rem; margin-inline: auto; min-width: 0; }
+.profile-overview__toolbar { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; align-items: center; }
+.profile-overview .simcard { --color-text-primary: #ececf1; --color-text-secondary: #b5b5c1; --color-text-muted: #a9a9b6; }
+.simcard--display { cursor: default; }
+.profile-data-note { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 1.5rem; font-size: var(--text-xs); color: var(--color-text-secondary); }
+.profile-data-note time { color: var(--color-text-muted); }
+.profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; align-items: start; }
+.dashboard-card { min-width: 0; padding: 1.5rem; background: var(--color-bg-surface); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-lg); display: grid; gap: 1.25rem; align-content: start; }
+.dashboard-card__heading { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: .75rem 1rem; }
+.dashboard-card h3, .verification-title { font-size: 1.375rem; font-weight: 600; color: var(--color-text-primary); line-height: 1.3; letter-spacing: -.025em; }
+.profile-source { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .75rem; font-size: var(--text-xs); color: var(--color-text-muted); }
+.dashboard-card__heading .profile-source { flex-basis: 100%; }
+.profile-source time { overflow-wrap: anywhere; }
+.identity-owner { display: grid; gap: .35rem; }
+.identity-owner strong { font-size: 1.5rem; overflow-wrap: anywhere; }
+.dashboard-card .kv { grid-template-columns: minmax(6rem, .65fr) minmax(0, 1fr); font-size: var(--text-sm); gap: .75rem 1rem; }
+.dashboard-card .kv dd { align-items: start; }
+.metric-grid { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem 1rem; }
+.metric { min-width: 0; display: flex; flex-direction: column; gap: .4rem; }
+.metric dt { color: var(--color-text-secondary); font-size: var(--text-xs); }
+.metric dd { margin: 0; color: var(--color-text-primary); font-size: 1.5rem; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.metric--prominent dd { font-size: clamp(1.75rem, 3vw, 2.5rem); letter-spacing: -.04em; }
+.metric dd.metric__note { color: var(--color-text-muted); font-size: var(--text-xs); font-weight: 400; letter-spacing: 0; line-height: 1.5; }
+.ownership-metrics { padding-top: 1.25rem; border-top: 1px solid var(--color-border-subtle); }
+.ownership-metrics dd { font-size: 1.25rem; }
+.ownership-metrics .metric--prominent dd { font-size: 1.75rem; }
+.live-status { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.unavailable--badge { display: inline-block; color: var(--color-text-muted); background: var(--color-bg-graphite); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-sm); padding: .2rem .45rem; font-size: .75rem; font-style: normal; font-weight: 400; line-height: 1.5; letter-spacing: 0; white-space: nowrap; vertical-align: middle; }
+.empty-data { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; color: var(--color-text-muted); font-size: var(--text-sm); }
+.activity-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+.activity-list li { display: grid; gap: .6rem; padding-bottom: 1rem; border-bottom: 1px solid var(--color-border-subtle); min-width: 0; }
+.activity-list li:last-child { padding-bottom: 0; border-bottom: 0; }
+.activity-list__line { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem; font-size: var(--text-sm); overflow-wrap: anywhere; }
+.activity-list__meta { display: flex; flex-wrap: wrap; gap: .4rem .75rem; font-size: var(--text-xs); color: var(--color-text-muted); overflow-wrap: anywhere; }
+.activity-list a { text-underline-offset: .25em; }
+.work-objective { font-size: var(--text-sm); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.work-objective summary { cursor: pointer; padding-block: .4rem; }
+.work-objective p { margin-top: .5rem; white-space: pre-wrap; }
+.verification-card { display: block; }
+.verification-card > summary { cursor: pointer; display: flex; gap: 1rem; justify-content: space-between; align-items: center; list-style: none; min-height: 2.75rem; }
+.verification-card > summary::-webkit-details-marker { display: none; }
+.verification-title { display: block; margin-bottom: .5rem; }
+.verification-toggle { font-size: 1.75rem; color: var(--color-text-secondary); }
+.verification-card[open] .verification-toggle { transform: rotate(45deg); }
+.verification-content { margin-top: 1.5rem; display: grid; gap: 1.25rem; }
+.verification-content .link-grid { grid-template-columns: 1fr; }
+.contract-address { overflow-wrap: anywhere; font-size: var(--text-xs); }
+.dashboard-card .chip-list { list-style: none; padding: 0; margin: .5rem 0 0; }
+.profile-dialog .btn--sm { min-height: 2.75rem; }
+@media (max-width: 54rem) {
+  .profile-grid { grid-template-columns: minmax(0, 1fr); }
+  .profile-dialog__body { padding: 1.25rem; gap: 1.5rem; }
+  .profile-dialog__header { padding: 1rem 1.25rem; }
+}
+@media (max-width: 40rem) {
+  .profile-dialog { width: 100%; max-height: 100dvh; }
+  .profile-dialog__body { padding: 1rem; }
+  .profile-dialog__header { padding: 1rem; }
+  .profile-eyebrow { font-size: .75rem; letter-spacing: .02em; }
+  .dashboard-card { padding: 1.25rem; }
+  .dashboard-card .kv { grid-template-columns: 1fr; gap: .25rem; }
+  .dashboard-card .kv dd { margin-bottom: .6rem; }
+  .metric-grid { gap: 1.25rem .5rem; }
+  .dashboard-card h3 { font-size: 1.25rem; }
+  .ownership-metrics { grid-template-columns: 1fr; }
+  .profile-overview__toolbar .cluster { gap: .5rem; }
+}
+
+@media (max-width: 40rem) {
+  .profile-overview .simcard__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .profile-overview .simcard__art { width: 100%; max-width: 15rem; margin-inline: auto; }
+}

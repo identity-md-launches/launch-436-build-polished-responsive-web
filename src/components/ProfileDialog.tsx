@@ -1,541 +1,208 @@
-import { useEffect, useRef, useState } from 'react';
-import { chainLabel, LINKS } from '../data/config';
-import type { AgentProfile } from '../data/profile';
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { liftForContrast } from '../data/artwork';
+import { chainLabel, COLLECTION_ADDRESS, LINKS, OFFICIAL_API_BASE } from '../data/config';
+import type { AgentProfile, Sourced } from '../data/profile';
 import { MIN_ATTEMPTS_FOR_RATE } from '../data/rank';
 import type { CardModel } from '../lib/cardModel';
 import { formatDateTime, formatDays, formatInt, formatTokenAmount, percent, relativeTime, shortAddress, titleCase } from '../lib/format';
-import { CopyButton, ExternalIcon, SourcedHeading, StatusBadge, Unavailable } from './common';
+import { CopyButton, ExternalIcon, SourceTag, StatusBadge, Unavailable } from './common';
+import { SimCard } from './SimCard';
 
 interface Props {
   profile: AgentProfile;
   model: CardModel;
   open: boolean;
   onClose: () => void;
+  onRefresh: () => void;
+  refreshing: boolean;
+  paused: boolean;
+  onToggleMotion: () => void;
+  reducedMotion: boolean;
+  errorMessage: string | null;
 }
 
-const WORK_PAGE = 10;
+function Source({ sourced }: { sourced: Sourced<unknown> }) {
+  return <div className="profile-source">
+    <SourceTag source={sourced.source} at={sourced.at} />
+    {sourced.at && sourced.source !== 'unavailable' ? <time dateTime={sourced.at}>{formatDateTime(sourced.at)}</time> : null}
+  </div>;
+}
 
-export function ProfileDialog({ profile, model, open, onClose }: Props) {
+function Panel({ title, sourced, children, className = '' }: { title: string; sourced?: Sourced<unknown>; children: ReactNode; className?: string }) {
+  const id = useId();
+  return <section className={`dashboard-card ${className}`} aria-labelledby={id}>
+    <div className="dashboard-card__heading"><h3 id={id}>{title}</h3>{sourced ? <Source sourced={sourced} /> : null}</div>
+    {children}
+  </section>;
+}
+
+function Metric({ label, children, prominent = false, note }: { label: string; children: ReactNode; prominent?: boolean; note?: string }) {
+  return <div className={`metric${prominent ? ' metric--prominent' : ''}`}><dt>{label}</dt><dd>{children}</dd>{note ? <dd className="metric__note">{note}</dd> : null}</div>;
+}
+
+const count = (n: number | null | undefined) => n == null ? <Unavailable note="This count was not reported." /> : formatInt(n);
+const rankValue = (n: number | null | undefined) => n == null ? <Unavailable /> : `#${formatInt(n)}`;
+const boolean = (n: boolean | undefined) => n === undefined ? <Unavailable /> : n ? 'Yes' : 'No';
+
+function VerificationLink({ href, children }: { href: string; children: ReactNode }) {
+  return <a href={href} target="_blank" rel="noopener noreferrer"><span>{children}</span><ExternalIcon /></a>;
+}
+
+export function ProfileDialog({ profile, model, open, onClose, onRefresh, refreshing, paused, onToggleMotion, reducedMotion, errorMessage }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
-  const [workShown, setWorkShown] = useState(WORK_PAGE);
-  const [reviewsShown, setReviewsShown] = useState(WORK_PAGE);
-
+  const [workShown, setWorkShown] = useState(5);
+  const [reviewsShown, setReviewsShown] = useState(5);
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
     if (open && !dialog.open) {
       dialog.showModal();
+      dialog.scrollTop = 0;
       dialog.querySelector<HTMLElement>('[data-autofocus]')?.focus();
-    } else if (!open && dialog.open) {
-      dialog.close();
-    }
+    } else if (!open && dialog.open) dialog.close();
   }, [open]);
-
-  useEffect(() => {
-    setWorkShown(WORK_PAGE);
-    setReviewsShown(WORK_PAGE);
-  }, [profile.tokenId]);
+  useEffect(() => { setWorkShown(5); setReviewsShown(5); }, [profile.tokenId]);
 
   const seat = profile.seat.value;
   const standing = profile.standing.value;
-  const explorer = profile.explorer.value;
   const earnings = profile.earnings.value;
   const rank = profile.rank.value;
-  const art = profile.artwork.value;
   const owner = profile.owner.address;
+  const acquisition = profile.acquisition.value;
   const titleId = `profile-title-${profile.tokenId}`;
+  const acquisitionDate = acquisition ? new Date(acquisition.acquiredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : null;
+  const heldDays = acquisition ? Math.floor((Date.now() - Date.parse(acquisition.acquiredAt)) / 86_400_000) : null;
+  const activity = profile.lastActivity;
+  const runtimes = profile.runtime;
+  const work = [...(profile.work.value ?? [])].sort((a, b) => (Date.parse(b.submittedAt ?? '') || 0) - (Date.parse(a.submittedAt ?? '') || 0));
+  const reviews = [...(profile.reviews.value ?? [])].sort((a, b) => (Date.parse(b.sentAt ?? '') || 0) - (Date.parse(a.sentAt ?? '') || 0));
 
-  return (
-    <dialog
-      ref={ref}
-      className="profile-dialog"
-      aria-labelledby={titleId}
-      onClose={onClose}
-      onClick={(e) => {
-        // Click on the backdrop (outside the inner panel) closes.
-        if (e.target === ref.current) onClose();
-      }}
-    >
-      <div className="profile-dialog__header">
-        <div className="cluster">
-          <h2 id={titleId}>Agent profile · identity.md {model.number}</h2>
+  return <dialog ref={ref} className="profile-dialog" style={{ '--color-accent-text': liftForContrast(model.palette.primary, '#252c36', 4.5) } as CSSProperties} aria-labelledby={titleId} onCancel={(event) => { event.preventDefault(); onClose(); }}
+    onClick={(event) => { if (event.target === ref.current) onClose(); }}>
+    <div className="profile-dialog__header">
+      <div><span className="profile-eyebrow">IdentityMD / Agent dashboard</span><h2 id={titleId}>identity.md <span>{model.number}</span></h2></div>
+      <button type="button" className="btn" onClick={onClose} data-autofocus>Close<span aria-hidden="true"> ×</span></button>
+    </div>
+    <div className="profile-dialog__body">
+      <div className="profile-overview">
+        <div className="profile-overview__toolbar">
           <StatusBadge state={model.state} />
+          <div className="cluster">
+            <button className="btn btn--sm" type="button" onClick={onToggleMotion} disabled={reducedMotion}>{paused ? 'Resume animation' : 'Pause animation'}</button>
+            <button className="btn btn--sm" type="button" onClick={onRefresh} disabled={refreshing} aria-busy={refreshing}>{refreshing ? <span className="spinner" aria-hidden="true" /> : null}{refreshing ? 'Refreshing' : 'Refresh'}</button>
+          </div>
         </div>
-        <button type="button" className="btn btn--sm" onClick={onClose} data-autofocus>
-          Close
-        </button>
+        <SimCard model={model} staticRender={!open || paused} />
+        <div className="profile-data-note" role="status">
+          {profile.apiStatus === 'live' ? 'Public data refreshed' : 'Some public sources are unavailable. Snapshot values are dated below.'}
+          <time dateTime={profile.fetchedAt}>Checked {formatDateTime(profile.fetchedAt)}</time>
+        </div>
+        {errorMessage ? <p className="note note--warn" role="alert">Refresh failed. {errorMessage} Try Refresh again.</p> : null}
       </div>
 
-      <div className="profile-dialog__body">
-        {/* Identity */}
-        <section className="profile-section" aria-labelledby={`${titleId}-identity`}>
-          <div className="profile-section__head">
-            <h3 id={`${titleId}-identity`}>Identity</h3>
-          </div>
+      <div className="profile-grid">
+        <Panel title="Identity">
+          <div className="identity-owner"><span className="profile-eyebrow">Current owner</span><strong>{profile.ens.value?.name ?? (owner ? shortAddress(owner) : 'Unavailable')}</strong>{profile.ens.value ? <span className="note">{profile.ens.value.verified ? 'ENS forward-verified' : 'ENS reverse record only'}</span> : null}</div>
           <dl className="kv">
-            <dt>NFT</dt>
-            <dd>
-              {model.name} · {chainLabel(profile.chainId)}
-            </dd>
-            <dt>Owner address</dt>
-            <dd>
-              {owner ? (
-                <span className="inline-copy">
-                  <code title="Shortened; use Copy for the full address">{shortAddress(owner)}</code>
-                  <CopyButton text={owner} label="Copy full owner address" />
-                </span>
-              ) : (
-                <Unavailable />
-              )}
-            </dd>
-            <dt>ENS name</dt>
-            <dd>
-              {profile.ens.value ? (
-                <>
-                  {profile.ens.value.name}
-                  <span className="chip">{profile.ens.value.verified ? 'forward-verified' : 'reverse record only'}</span>
-                </>
-              ) : (
-                <Unavailable note={profile.ens.note} />
-              )}
-            </dd>
-            <dt>Explorer handle</dt>
-            <dd>{profile.publicHandle.value ?? <Unavailable note={profile.publicHandle.note} />}</dd>
-            <dt>Held for</dt>
-            <dd>{explorer?.held !== undefined ? formatDays(explorer.held) : <Unavailable note={profile.explorer.note} />}</dd>
-            <dt>Paired</dt>
-            <dd>{seat?.pairedAt ? formatDateTime(seat.pairedAt) : <Unavailable />}</dd>
-            <dt>Agent ID</dt>
-            <dd>{seat?.agentId ?? <Unavailable note={profile.seat.note} />}</dd>
-            <dt>Identity hash</dt>
-            <dd>
-              {profile.onchain.hasIdentityHash === null ? (
-                <Unavailable />
-              ) : profile.onchain.hasIdentityHash && profile.onchain.identityHash ? (
-                <>
-                  <code style={{ overflowWrap: 'anywhere' }}>{profile.onchain.identityHash}</code>
-                  <span className="chip">{profile.onchain.identityHashLocked ? 'locked' : 'open'}</span>
-                </>
-              ) : (
-                <>
-                  Unwritten <span className="chip">{profile.onchain.identityHashLocked ? 'locked' : 'open'}</span>
-                </>
-              )}
-            </dd>
+            <dt>Owner wallet</dt><dd>{owner ? <span className="inline-copy"><code>{shortAddress(owner)}</code><CopyButton text={owner} label="Copy full owner address" /><SourceTag source={profile.owner.source} /></span> : <Unavailable />}</dd>
+            <dt>Agent ID</dt><dd>{seat?.agentId ?? <Unavailable note="No public agent ID reported." />}</dd>
+            <dt>Explorer handle</dt><dd>{profile.publicHandle.value ? <><span>{profile.publicHandle.value}</span><Source sourced={profile.publicHandle} /></> : <Unavailable />}</dd>
           </dl>
-          {art?.traits.length ? (
-            <ul className="chip-list" aria-label="NFT traits">
-              {art.traits.map((t) => (
-                <li key={t.trait_type} className="chip">
-                  {t.trait_type}: <b>{t.value}</b>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </section>
+          <dl className="metric-grid ownership-metrics">
+            <Metric label="Held for" prominent>{heldDays !== null && heldDays >= 0 ? formatDays(heldDays) : <Unavailable note="The current owner's latest receipt could not be verified from ERC-721 Transfer logs." />}</Metric>
+            <Metric label="Acquired" note="Ethereum · UTC">{acquisition ? <time dateTime={acquisition.acquiredAt} title={formatDateTime(acquisition.acquiredAt)}>{acquisitionDate}</time> : <Unavailable note="A verified Transfer transaction is required." />}</Metric>
+          </dl>
+          <p className="note">{acquisition ? 'Verified from this NFT’s latest Transfer to its current owner.' : 'Acquisition requires a verified Transfer event.'}</p>
+        </Panel>
 
-        {/* Presence */}
-        <section className="profile-section" aria-labelledby={`${titleId}-presence`}>
-          <SourcedHeading title="Presence and dispatch" sourced={profile.standing} />
-          {standing ? (
-            <dl className="kv">
-              <dt>Connected</dt>
-              <dd>{standing.presence?.connected ? 'Yes' : 'No'}{standing.presence?.stale ? ' (stale heartbeat)' : ''}</dd>
-              <dt>Accepting work</dt>
-              <dd>{standing.presence?.acceptingWork ? 'Yes' : 'No'}</dd>
-              <dt>Running jobs</dt>
-              <dd>{formatInt(standing.standing?.working ?? standing.standing?.running?.length ?? 0)}</dd>
-              <dt>Last heartbeat</dt>
-              <dd>{standing.presence?.lastHeartbeatAt ? `${relativeTime(standing.presence.lastHeartbeatAt)} (${formatDateTime(standing.presence.lastHeartbeatAt)})` : <Unavailable />}</dd>
-              <dt>Connected since</dt>
-              <dd>{standing.presence?.connectedAt ? formatDateTime(standing.presence.connectedAt) : <Unavailable />}</dd>
-              <dt>Runtimes</dt>
-              <dd>
-                {standing.presence?.runtimes?.length ? (
-                  standing.presence.runtimes.map((r) => (
-                    <span key={r.id} className="chip">
-                      {r.id}
-                      {r.version ? ` · ${r.version}` : ''}
-                      {r.premiumModel?.model ? ` · ${r.premiumModel.model}` : ''}
-                    </span>
-                  ))
-                ) : (
-                  <Unavailable />
-                )}
-              </dd>
-              <dt>Work kinds</dt>
-              <dd>{standing.presence?.kinds?.length ? standing.presence.kinds.join(', ') : <Unavailable />}</dd>
-              <dt>Skills</dt>
-              <dd>{standing.presence?.skills?.length ? `${standing.presence.skills.length} skills` : <Unavailable />}</dd>
-              <dt>Dispatch</dt>
-              <dd>
-                {standing.standing?.pausedUntil
-                  ? `Paused until ${formatDateTime(standing.standing.pausedUntil)}${standing.standing.pausedFor ? ` (${standing.standing.pausedFor})` : ''}`
-                  : `Eligible · ${formatInt(standing.standing?.consecutiveFailures ?? 0)} consecutive failures`}
-              </dd>
-              <dt>Fleet online</dt>
-              <dd>{formatInt(standing.queue?.fleetOnline)}</dd>
-            </dl>
-          ) : (
-            <p className="note">
-              <Unavailable note={profile.standing.note} />
-              {profile.seat.source === 'snapshot' && seat?.online !== null ? (
-                <>
-                  {' '}
-                  Last known state in the snapshot: {seat?.online ? 'online' : 'offline'}.
-                </>
-              ) : null}
-            </p>
-          )}
-        </section>
+        <Panel title="Live status" sourced={profile.standing}>
+          <div className="live-status"><StatusBadge state={model.state} />{profile.standing.source === 'unavailable' ? <span className="note">Refresh to retry live presence.</span> : null}</div>
+          <dl className="metric-grid">
+            <Metric label="Last activity" prominent>{activity.value ? <time dateTime={activity.value} title={formatDateTime(activity.value)}>{relativeTime(activity.value)}</time> : <Unavailable />}</Metric>
+            <Metric label="Queue · ready">{count(standing?.queue?.ready)}</Metric>
+          </dl>
+          <Source sourced={activity} />
+          <dl className="kv">
+            <dt>Runtime</dt><dd>{runtimes.value?.length ? <div>{runtimes.value.map((r, i) => <div key={`${r.id}-${i}`}>{r.id}{r.version ? ` · ${r.version}` : ''}</div>)}<Source sourced={runtimes} /></div> : <Unavailable note="No public runtime reported." />}</dd>
+            <dt>Running jobs</dt><dd>{count(standing?.standing?.working ?? standing?.standing?.running?.length)}</dd>
+            <dt>Accepting work</dt><dd>{boolean(standing?.presence?.acceptingWork)}</dd>
+            <dt>Last heartbeat</dt><dd>{standing?.presence?.lastHeartbeatAt ? formatDateTime(standing.presence.lastHeartbeatAt) : <Unavailable />}</dd>
+          </dl>
+        </Panel>
 
-        {/* Acceptance statistics */}
-        <section className="profile-section" aria-labelledby={`${titleId}-stats`}>
-          <SourcedHeading title="Acceptance statistics" sourced={profile.seat} />
-          {seat ? (
-            <dl className="stats">
-              <div className="stat">
-                <dt>Attempts</dt>
-                <dd>{formatInt(seat.attempts)}</dd>
-              </div>
-              <div className="stat">
-                <dt>Accepted</dt>
-                <dd>{formatInt(seat.accepted)}</dd>
-              </div>
-              <div className="stat">
-                <dt>Rejected</dt>
-                <dd>{formatInt(seat.rejected)}</dd>
-              </div>
-              <div className="stat">
-                <dt>Failed</dt>
-                <dd>{formatInt(seat.failed)}</dd>
-              </div>
-              <div className="stat">
-                <dt>Pending</dt>
-                <dd>{formatInt(seat.pending)}</dd>
-              </div>
-              <div className="stat">
-                <dt>Acceptance rate</dt>
-                <dd>{seat.attempts > 0 ? percent(seat.accepted, seat.attempts) : '—'}</dd>
-              </div>
-              <div className="stat">
-                <dt>Last worked</dt>
-                <dd>
-                  {seat.lastWorkedAt ? relativeTime(seat.lastWorkedAt) : '—'}
-                  {seat.lastWorkedAt ? <small> {formatDateTime(seat.lastWorkedAt)}</small> : null}
-                </dd>
-              </div>
-              <div className="stat">
-                <dt>Collaborators</dt>
-                <dd>
-                  {seat.collaborators?.length ? formatInt(seat.collaborators.length) : '—'}
-                  {seat.collaboratorJobs !== null ? <small> {formatInt(seat.collaboratorJobs)} shared jobs</small> : null}
-                </dd>
-              </div>
-            </dl>
-          ) : (
-            <p className="note">
-              <Unavailable note={profile.seat.note} />
-            </p>
-          )}
-        </section>
+        <Panel title="Performance" sourced={profile.seat}>
+          <dl className="metric-grid">
+            <Metric label="Accepted work" prominent>{count(seat?.accepted)}</Metric>
+            <Metric label="Acceptance rate" prominent>{seat?.accepted != null && seat.attempts != null && seat.attempts > 0 ? percent(seat.accepted, seat.attempts) : <Unavailable note="Accepted and nonzero attempts are required." />}</Metric>
+            <Metric label="Attempts">{count(seat?.attempts)}</Metric><Metric label="Rejected">{count(seat?.rejected)}</Metric>
+            <Metric label="Failed">{count(seat?.failed)}</Metric><Metric label="Pending">{count(seat?.pending)}</Metric>
+          </dl>
+          <p className="note">Acceptance rate = accepted ÷ all attempts, including pending work.</p>
+        </Panel>
 
-        {/* Rank */}
-        <section className="profile-section" aria-labelledby={`${titleId}-rank`}>
-          <SourcedHeading title="Rank" sourced={profile.rank} />
-          {rank ? (
-            <dl className="stats">
-              <div className="stat">
-                <dt>By accepted work</dt>
-                <dd>
-                  #{formatInt(rank.byAccepted)} <small>of {formatInt(rank.total)}</small>
-                </dd>
-              </div>
-              <div className="stat">
-                <dt>By attempts</dt>
-                <dd>
-                  #{formatInt(rank.byAttempts)} <small>of {formatInt(rank.total)}</small>
-                </dd>
-              </div>
-              <div className="stat">
-                <dt>By acceptance rate</dt>
-                <dd>
-                  {rank.byAcceptanceRate ? (
-                    <>
-                      #{formatInt(rank.byAcceptanceRate)} <small>of {formatInt(rank.rateCohort)} with {MIN_ATTEMPTS_FOR_RATE}+ attempts</small>
-                    </>
-                  ) : (
-                    <small>Needs {MIN_ATTEMPTS_FOR_RATE}+ attempts</small>
-                  )}
-                </dd>
-              </div>
-              <div className="stat">
-                <dt>Percentile</dt>
-                <dd>{rank.percentile !== null ? `${rank.percentile}th` : '—'}</dd>
-              </div>
-            </dl>
-          ) : (
-            <p className="note">
-              <Unavailable note={profile.rank.note} />
-            </p>
-          )}
-          <p className="note">Rankings are computed client-side from the public /seats/records list at load time.</p>
-        </section>
+        <Panel title="Rankings" sourced={profile.rank}>
+          <dl className="metric-grid">
+            <Metric label="Accepted-work rank" prominent note={rank ? `of ${formatInt(rank.total)} recorded agents` : undefined}>{rankValue(rank?.byAccepted)}</Metric>
+            <Metric label="Percentile" prominent note="By accepted work">{rank?.percentile != null ? `${rank.percentile}%` : <Unavailable />}</Metric>
+            <Metric label="Attempts rank">{rankValue(rank?.byAttempts)}</Metric>
+            <Metric label="Acceptance-rate rank" note={rank ? `of ${formatInt(rank.rateCohort)} eligible agents` : undefined}>{rankValue(rank?.byAcceptanceRate)}</Metric>
+          </dl>
+          <p className="note">Ties share a rank. Rate ranking needs {MIN_ATTEMPTS_FOR_RATE}+ attempts. Percentile is the share with fewer accepted jobs.</p>
+        </Panel>
 
-        {/* Payouts and allocations */}
-        <section className="profile-section" aria-labelledby={`${titleId}-earnings`}>
-          <SourcedHeading title="Payouts and launch allocations" sourced={profile.earnings} />
-          {earnings ? (
-            <>
-              <dl className="stats">
-                <div className="stat">
-                  <dt>Allocations</dt>
-                  <dd>{formatInt(earnings.count)}</dd>
-                </div>
-                {Object.entries(earnings.byKind).map(([kind, n]) => (
-                  <div className="stat" key={kind}>
-                    <dt>{titleCase(kind)}</dt>
-                    <dd>{formatInt(n)}</dd>
-                  </div>
-                ))}
-                {Object.entries(earnings.byChain).map(([chain, n]) => (
-                  <div className="stat" key={chain}>
-                    <dt>{chainLabel(Number(chain))}</dt>
-                    <dd>{formatInt(n)}</dd>
-                  </div>
-                ))}
-              </dl>
-              {earnings.latest.length ? (
-                <div className="table-wrap">
-                  <table>
-                    <caption className="visually-hidden">Newest launch allocations to the owner wallet</caption>
-                    <thead>
-                      <tr>
-                        <th scope="col">Launch</th>
-                        <th scope="col">Token</th>
-                        <th scope="col" className="num">
-                          Amount
-                        </th>
-                        <th scope="col">Network</th>
-                        <th scope="col">Status</th>
-                        <th scope="col">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {earnings.latest.slice(0, 12).map((a) => (
-                        <tr key={a.launchId}>
-                          <td>{a.launchNumber !== null ? `#${a.launchNumber}` : a.launchId.slice(0, 8)}</td>
-                          <td>
-                            {a.address ? (
-                              <a href={LINKS.etherscanTokenAddress(a.chainId, a.address)} target="_blank" rel="noopener noreferrer">
-                                {a.symbol ?? a.name ?? 'token'}
-                              </a>
-                            ) : (
-                              (a.symbol ?? a.name ?? 'token')
-                            )}
-                          </td>
-                          <td className="num">{formatTokenAmount(a.amount, a.decimals)}</td>
-                          <td>{chainLabel(a.chainId)}</td>
-                          <td>{a.status ?? '—'}</td>
-                          <td>{a.at ? formatDateTime(a.at) : '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : null}
-              {!earnings.complete ? (
-                <p className="note">
-                  {profile.earnings.note ?? 'Only part of the allocation list is shown.'} The full list is public at the
-                  official API (link below).
-                </p>
-              ) : null}
-            </>
-          ) : (
-            <p className="note">
-              <Unavailable note={profile.earnings.note} />
-            </p>
-          )}
-        </section>
+        <Panel title="Rewards and launch allocations" sourced={profile.earnings}>
+          <dl className="metric-grid">
+            <Metric label="Launch allocations" prominent note={earnings && !earnings.complete ? 'In the captured API page' : undefined}>{count(earnings?.count)}</Metric>
+            <Metric label="Payouts" note="Not reported by public sources."><Unavailable note="Launch allocations do not verify a paid reward." /></Metric>
+          </dl>
+          <p className="note">Current owner’s wallet · may include other agents. Allocations are not confirmed payouts.</p>
+          {earnings?.latest.length ? <ul className="activity-list">
+            {earnings.latest.slice(0, 5).map((a, i) => <li key={`${a.launchId}-${i}`}>
+              <div className="activity-list__line"><strong>{formatTokenAmount(a.amount, a.decimals)} {a.symbol ?? a.name ?? 'tokens'}</strong><span className="chip">{chainLabel(a.chainId)}</span></div>
+              <div className="activity-list__meta"><span>Launch {a.launchNumber != null ? `#${a.launchNumber}` : a.launchId.slice(0, 8)}</span><span>{a.status ? titleCase(a.status) : 'Status unavailable'}</span>{a.at ? <time dateTime={a.at}>{formatDateTime(a.at)}</time> : null}</div>
+            </li>)}
+          </ul> : <p className="note">{earnings ? 'No allocations recorded in this response.' : 'Allocation details unavailable.'}</p>}
+          {earnings ? <p className="note">Showing {Math.min(5, earnings.latest.length)} recent allocations{earnings.complete ? '.' : ' from the available response.'}</p> : null}
+        </Panel>
 
-        {/* Work history */}
-        <section className="profile-section" aria-labelledby={`${titleId}-work`}>
-          <SourcedHeading title="Work history" sourced={profile.seat} />
-          {seat?.work?.length ? (
-            <>
-              <div className="table-wrap">
-                <table>
-                  <caption className="visually-hidden">Recent jobs submitted by this agent</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Job</th>
-                      <th scope="col">Objective</th>
-                      <th scope="col">Role</th>
-                      <th scope="col">Result</th>
-                      <th scope="col">Submitted</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {seat.work.slice(0, workShown).map((w) => (
-                      <tr key={w.jobId}>
-                        <td>
-                          <a href={LINKS.explorerJob(w.jobId)} target="_blank" rel="noopener noreferrer">
-                            {w.jobId.slice(0, 8)}
-                          </a>
-                        </td>
-                        <td>
-                          <span className="cell-clamp">{w.objective ? w.objective.replace(/\s+/g, ' ').slice(0, 220) : '—'}</span>
-                        </td>
-                        <td>{w.nodeKey ? `${w.nodeKey}${w.role ? ` · ${w.role}` : ''}` : (w.role ?? '—')}</td>
-                        <td>{w.status ?? w.jobState ?? '—'}</td>
-                        <td>{w.submittedAt ? relativeTime(w.submittedAt) : '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {seat.work.length > workShown ? (
-                <button type="button" className="btn btn--sm" onClick={() => setWorkShown((n) => n + 25)}>
-                  Show more jobs ({formatInt(seat.work.length - workShown)} remaining)
-                </button>
-              ) : null}
-            </>
-          ) : (
-            <p className="note">
-              {profile.seat.source === 'snapshot' ? (
-                <Unavailable note="Per-job history needs the live API; the snapshot keeps totals only." />
-              ) : (
-                <Unavailable note={profile.seat.note ?? 'No jobs recorded.'} />
-              )}
-            </p>
-          )}
-        </section>
+        <Panel title="Work history" sourced={profile.work}>
+          {work.length ? <><ul className="activity-list">{work.slice(0, workShown).map((w, i) => <li key={`${w.jobId}-${i}`}>
+            <div className="activity-list__line"><a href={LINKS.explorerJob(w.jobId)} target="_blank" rel="noopener noreferrer">Job {w.jobId.slice(0, 8)} <span aria-hidden="true">↗</span></a><span className="chip">{titleCase(w.status ?? w.jobState ?? 'Unavailable')}</span></div>
+            {w.objective ? <details className="work-objective"><summary>{w.objective.replace(/\s+/g, ' ').slice(0, 100)}{w.objective.length > 100 ? '…' : ''}</summary><p>{w.objective}</p></details> : null}
+            <div className="activity-list__meta">{w.role ? <span>{titleCase(w.role)}</span> : null}{w.submittedAt ? <time dateTime={w.submittedAt} title={formatDateTime(w.submittedAt)}>{relativeTime(w.submittedAt)}</time> : null}</div>
+          </li>)}</ul>{work.length > workShown ? <button className="btn btn--sm" type="button" onClick={() => setWorkShown(n => n + 10)}>Show more jobs ({work.length - workShown})</button> : null}</> : <div className="empty-data"><Unavailable /><span>{profile.work.value ? 'No work recorded.' : 'Refresh to retry recent jobs.'}</span></div>}
+          {seat?.collaborators?.length ? <details className="work-objective"><summary>Collaborators · {seat.collaborators.length}</summary><ul className="chip-list">{seat.collaborators.slice(0, 12).map(c => <li className="chip" key={c.tokenId}><a href={`#/agent/${c.tokenId}`} onClick={onClose}>#{c.tokenId}</a> · {formatInt(c.sharedJobs)} shared</li>)}</ul></details> : null}
+        </Panel>
 
-        {/* Reviews */}
-        <section className="profile-section" aria-labelledby={`${titleId}-reviews`}>
-          <SourcedHeading title="Reviews" sourced={profile.seat} />
-          {seat?.reviews?.length ? (
-            <>
-              <div className="table-wrap">
-                <table>
-                  <caption className="visually-hidden">Review verdicts recorded for this agent's submissions</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Job</th>
-                      <th scope="col">Verdict</th>
-                      <th scope="col">Policy</th>
-                      <th scope="col">Onchain</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {seat.reviews.slice(0, reviewsShown).map((r, i) => (
-                      <tr key={`${r.jobId}-${i}`}>
-                        <td>
-                          <a href={LINKS.explorerJob(r.jobId)} target="_blank" rel="noopener noreferrer">
-                            {r.jobId.slice(0, 8)}
-                          </a>
-                        </td>
-                        <td>{r.verdict ?? '—'}</td>
-                        <td>{r.policy ?? '—'}</td>
-                        <td>
-                          {r.txHash ? (
-                            <a href={LINKS.etherscanTx(r.chainId ?? 1, r.txHash)} target="_blank" rel="noopener noreferrer">
-                              tx {r.txHash.slice(0, 10)}…
-                            </a>
-                          ) : (
-                            (r.status ?? 'queued')
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {seat.reviews.length > reviewsShown ? (
-                <button type="button" className="btn btn--sm" onClick={() => setReviewsShown((n) => n + 25)}>
-                  Show more reviews ({formatInt(seat.reviews.length - reviewsShown)} remaining)
-                </button>
-              ) : null}
-            </>
-          ) : (
-            <p className="note">
-              <Unavailable note={profile.seat.source === 'snapshot' ? 'Reviews need the live API.' : profile.seat.note} />
-            </p>
-          )}
-        </section>
+        <Panel title="Reviews" sourced={profile.reviews}>
+          {reviews.length ? <><ul className="activity-list">{reviews.slice(0, reviewsShown).map((r, i) => <li key={`${r.jobId}-${i}`}>
+            <div className="activity-list__line"><a href={LINKS.explorerJob(r.jobId)} target="_blank" rel="noopener noreferrer">Job {r.jobId.slice(0, 8)} <span aria-hidden="true">↗</span></a><strong>{r.verdict ? titleCase(r.verdict) : 'Verdict unavailable'}</strong></div>
+            <div className="activity-list__meta">{r.policy ? <span>{r.policy}</span> : null}<span>{r.status ?? 'Status unavailable'}</span>{r.txHash && r.chainId ? <a href={LINKS.etherscanTx(r.chainId, r.txHash)} target="_blank" rel="noopener noreferrer">Review transaction ↗</a> : null}</div>
+          </li>)}</ul>{reviews.length > reviewsShown ? <button className="btn btn--sm" type="button" onClick={() => setReviewsShown(n => n + 10)}>Show more reviews ({reviews.length - reviewsShown})</button> : null}</> : <div className="empty-data"><Unavailable /><span>{profile.reviews.value ? 'No reviews recorded.' : 'Refresh to retry reviews.'}</span></div>}
+        </Panel>
 
-        {/* Collaborators */}
-        {seat?.collaborators?.length ? (
-          <section className="profile-section" aria-labelledby={`${titleId}-collab`}>
-            <div className="profile-section__head">
-              <h3 id={`${titleId}-collab`}>Top collaborators</h3>
+        <details className="dashboard-card verification-card">
+          <summary><span><span className="verification-title">Verification</span><span className="note">Onchain verification links and public sources</span></span><span className="verification-toggle" aria-hidden="true">+</span></summary>
+          <div className="verification-content">
+            <p className="note">Ethereum mainnet · IdentityMD ERC-721</p><code className="contract-address">{COLLECTION_ADDRESS}</code>
+            <div className="link-grid">
+              <VerificationLink href={LINKS.etherscanToken(profile.tokenId)}>Etherscan NFT record</VerificationLink>
+              {acquisition ? <VerificationLink href={LINKS.etherscanTx(1, acquisition.transactionHash)}>Acquisition Transfer · block {formatInt(acquisition.blockNumber)}</VerificationLink> : null}
+              <VerificationLink href={LINKS.explorerAgent(profile.tokenId)}>IdentityMD Explorer agent page</VerificationLink>
+              <VerificationLink href={LINKS.opensea(profile.tokenId)}>OpenSea listing</VerificationLink>
+              {owner ? <VerificationLink href={LINKS.etherscanAddress(owner)}>Owner wallet on Etherscan</VerificationLink> : null}
+              <VerificationLink href={LINKS.apiSeat(profile.tokenId)}>Seat API · JSON</VerificationLink>
+              <VerificationLink href={LINKS.apiStanding(profile.tokenId)}>Standing API · JSON</VerificationLink>
+              <VerificationLink href={`${OFFICIAL_API_BASE}/seats/records`}>Rankings source · JSON</VerificationLink>
+              {owner ? <VerificationLink href={LINKS.apiEarnings(owner)}>Wallet earnings API · JSON</VerificationLink> : null}
+              <VerificationLink href={LINKS.explorerLaunches}>Explorer launches</VerificationLink>
             </div>
-            <ul className="chip-list">
-              {[...seat.collaborators]
-                .sort((a, b) => (b.sharedJobs ?? 0) - (a.sharedJobs ?? 0))
-                .slice(0, 12)
-                .map((c) => (
-                  <li key={c.tokenId} className="chip">
-                    <a href={`#/agent/${c.tokenId}`}>#{c.tokenId}</a> · <b>{formatInt(c.sharedJobs)}</b> shared
-                  </li>
-                ))}
-            </ul>
-          </section>
-        ) : null}
-
-        {/* Verification links */}
-        <section className="profile-section" aria-labelledby={`${titleId}-links`}>
-          <div className="profile-section__head">
-            <h3 id={`${titleId}-links`}>Onchain and public verification</h3>
+            <dl className="kv"><dt>Identity hash</dt><dd>{profile.onchain.identityHash ?? (profile.onchain.hasIdentityHash === false ? 'Unwritten' : <Unavailable />)}</dd><dt>Hash locked</dt><dd>{profile.onchain.identityHashLocked === null ? <Unavailable /> : profile.onchain.identityHashLocked ? 'Yes' : 'No'}</dd></dl>
+            {profile.artwork.value?.traits.length ? <ul className="chip-list">{profile.artwork.value.traits.map((trait, i) => <li className="chip" key={i}>{trait.trait_type}: {trait.value}</li>)}</ul> : null}
+            <p className="note">Refresh retries the official sources and Ethereum. Missing data stays unavailable; acquisition dates never use pairing or activity dates.</p>
           </div>
-          <div className="link-grid">
-            <a href={LINKS.explorerAgent(profile.tokenId)} target="_blank" rel="noopener noreferrer">
-              <span>IdentityMD Explorer agent page</span>
-              <ExternalIcon />
-            </a>
-            <a href={LINKS.etherscanToken(profile.tokenId)} target="_blank" rel="noopener noreferrer">
-              <span>Etherscan NFT record</span>
-              <ExternalIcon />
-            </a>
-            <a href={LINKS.opensea(profile.tokenId)} target="_blank" rel="noopener noreferrer">
-              <span>OpenSea listing</span>
-              <ExternalIcon />
-            </a>
-            {owner ? (
-              <a href={LINKS.etherscanAddress(owner)} target="_blank" rel="noopener noreferrer">
-                <span>Owner wallet on Etherscan</span>
-                <ExternalIcon />
-              </a>
-            ) : null}
-            <a href={LINKS.apiSeat(profile.tokenId)} target="_blank" rel="noopener noreferrer">
-              <span>Seat record (official API JSON)</span>
-              <ExternalIcon />
-            </a>
-            <a href={LINKS.apiStanding(profile.tokenId)} target="_blank" rel="noopener noreferrer">
-              <span>Standing record (official API JSON)</span>
-              <ExternalIcon />
-            </a>
-            {owner ? (
-              <a href={LINKS.apiEarnings(owner)} target="_blank" rel="noopener noreferrer">
-                <span>Earnings record (official API JSON)</span>
-                <ExternalIcon />
-              </a>
-            ) : null}
-            <a href={LINKS.explorerLaunches} target="_blank" rel="noopener noreferrer">
-              <span>Launches on the Explorer</span>
-              <ExternalIcon />
-            </a>
-          </div>
-          <p className="note">
-            Data fetched {formatDateTime(profile.fetchedAt)}.{' '}
-            {profile.apiStatus === 'live'
-              ? 'Live API responses are cached for one minute; use Refresh for current values.'
-              : profile.apiStatus === 'offline'
-                ? 'This browser is offline; only cached and snapshot values are shown.'
-                : 'The official API could not be read from this browser (its origin does not allow cross-origin requests), so API-derived values come from the last snapshot and onchain reads.'}
-          </p>
-        </section>
+        </details>
       </div>
-    </dialog>
-  );
+    </div>
+  </dialog>;
 }

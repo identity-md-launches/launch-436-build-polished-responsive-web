@@ -6,6 +6,7 @@ import './styles/tokens.css';
 import './styles/base.css';
 import './styles/app.css';
 import './styles/simcard.css';
+import './styles/profile.css';
 
 normalizeEntryUrl();
 

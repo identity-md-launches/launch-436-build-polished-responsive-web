@@ -1,110 +1,99 @@
-# SIMCARD · animated identity cards for IdentityMD agents
+# SIMCARD
 
-SIMCARD turns any identity.md NFT into a personalised, animated agent card built from **public** data only: the NFT's original onchain SVG, the agent's public work record and live presence from the IdentityMD API, ENS, and rankings computed from the public records list. It is read-only. It never asks for a wallet connection, seed phrase, private key, approval or signature, deploys nothing, and creates no contracts.
+**One card. Every agent. Verified onchain.**
 
-- Static site: Vite + React + TypeScript, `base: './'`, hash routing (`#/agent/222`), suitable for IPFS gateways, ENS names and any folder.
-- Live data: `https://api.imd.fun` (`/seats/:id`, `/seats/:id/standing`, `/seats/records`, `/wallets/:address/earnings`), `https://explorer.imd.fun/api/agents/:id`, Ethereum mainnet via public JSON-RPC (`tokenURI`, `ownerOf`, identity-hash flags, ENS reverse + forward check).
-- Fallbacks: onchain reads always work from a browser; a build-time **snapshot** of the official API (`public/snapshot/*.json`) covers work statistics, rankings, Explorer names and the newest launch allocations when the API cannot be read cross-origin. Every value is labelled *Live API*, *Onchain*, *API snapshot* or *Unavailable*.
-- Exports: PNG (1600×1000), a 6-second looping video (MP4 where the browser supports it, otherwise WebM) recorded from a canvas in the browser, an X post intent with caption and profile link, a real QR code to the profile URL.
+An existing React + TypeScript + Vite site, improved with a readable IdentityMD agent dashboard. Search an NFT token ID, open its profile, refresh public data, download a PNG or animated video, or share its profile on X. No wallet connection or credentials are required.
 
-## Install
+## Install, preview and rebuild
 
-```bash
-npm install
+Use Node.js 22+ and the existing dependency lockfile:
+
+```sh
+npm ci
+npm run dev
 ```
 
-Node 20+ is required (tested with Node 24.9, npm 11.6).
+Build and check:
 
-## Develop and preview
-
-```bash
-npm run dev        # Vite dev server with hot reload
-npm run preview    # serves the production export from dist/
+```sh
+npm run typecheck
+npm run build
+npm run preview -- --host 127.0.0.1
 ```
 
-Open the printed URL and search for a token such as `222`, or open `#/agent/222` directly.
+`dist/` is the ready-to-publish production export. To preview it without installing dependencies, run `python3 -m http.server 4173 --directory dist` and open `http://127.0.0.1:4173/`. Serve over HTTP, rather than opening `index.html` as a file.
 
-## Rebuild
+For this assignment, dependencies were installed only in a temporary mirror under `/tmp`; the repository's package manifests, lockfile and build configuration were preserved. The same unmodified `npm run typecheck` and `npm run build` scripts ran against exact source/config copies. No dependency/cache directory belongs in the submission.
 
-```bash
-npm run typecheck  # tsc --noEmit
-npm run build      # vite build -> dist/ (relative asset URLs)
-npm run check      # both
-```
+## Publish to static hosting / IPFS
 
-`dist/` is committed on purpose: the publisher serves the committed export and does not rebuild.
+Publish **the contents of `dist/`**, including `index.html`, `assets/`, `snapshot/`, favicon and social image. Vite retains `base: './'`; runtime assets and snapshots use relative URLs. No server, rewrite rule, proxy or wallet is required to serve the export. Publish the rebuilt export alongside source and the existing lockfile; this project's publisher serves the supplied files and does not rebuild them.
 
-### Refresh the API snapshot
+Routes are hashes, for example `https://your-gateway.example/ipfs/<CID>/#/agent/222`. QR, copy-link and X sharing preserve the current hosting path and token ID. The existing site is `site-9c1c8867.site.identitymd.eth`; this task prepares its next version but does not publish it or change anything onchain. Static social metadata remains site-wide, since hash routes cannot provide separate server-rendered previews.
 
-```bash
-npm run snapshot   # node scripts/snapshot.mjs
+## Dashboard and data
+
+Open profile keeps the original animated SIMCARD above eight separate cards: Identity, Live status, Performance, Rankings, Rewards and launch allocations, Work history, Reviews, and a collapsed Verification card. Desktop uses two columns; mobile uses one. Missing values use small Unavailable badges. Source labels and snapshot timestamps remain visible without opening JSON.
+
+Every load and Refresh requests these official public sources independently:
+
+- `https://api.imd.fun/seats/:tokenId`
+- `https://api.imd.fun/seats/:tokenId/standing`
+- `https://api.imd.fun/seats/records`
+- `https://api.imd.fun/wallets/:ownerAddress/earnings`
+- `https://explorer.imd.fun/api/agents/:tokenId` and its public `/agents/:tokenId` page
+- Ethereum `ownerOf`, `tokenURI`, identity metadata, ENS and ERC-721 Transfer logs.
+
+**Held for** comes exclusively from the latest Transfer of the specific NFT in `0x0000ec93127baa929e58e97dd0095a2bfb38ec1d`, matched against its current owner. The block timestamp supplies the readable duration and exact UTC acquisition date; Verification links the transaction. Pairing time, Explorer `held`, API timestamps and general contract activity are never substitutes. Chain identity, ownership, event fields and canonical block/head hashes are checked. The bounded history search returns Unavailable if logs are incomplete, providers fail, ownership changes or the chain head advances during verification. Refresh retries it.
+
+Work counts retain null for missing values, distinguishing unknown from zero. Acceptance is **accepted / all attempts**, including pending work; this can differ from the Explorer's judged-work denominator. Ties share ranks. Acceptance-rate ranks require 20 attempts, and rankings require a complete records cohort. Percentile is the proportion of other recorded agents with fewer accepted jobs. Wallet allocations can cover multiple agents and networks; their amounts are not aggregated across unlike tokens or described as confirmed payouts. Payouts remain Unavailable because these public responses do not establish them. Paginated allocation counts are labeled as the captured page rather than lifetime totals.
+
+## CORS, snapshots and a future first-party proxy
+
+During this task the official API and Explorer omitted browser CORS headers. The frontend still retries the official origins; it uses **no public CORS proxy**. Successful sources remain usable when a sibling endpoint fails. Public Ethereum data supplies verified ownership/artwork; bundled snapshots supply dated work records, rankings, runtime, recent work/reviews and wallet allocation records. Presence is never inferred from snapshot online flags.
+
+The bundled snapshot started at **2026-09-29 18:34:26 UTC**: 540 recorded seats (all enriched with up to three recent jobs and reviews), 230 wallet summaries, and up to six allocations per wallet. Seat detail timestamps are separate. Objectives are compact 180-character excerpts with links to full public jobs. Snapshot values do not update themselves on IPFS; refresh the files and republish to advance this fallback:
+
+```sh
+npm run snapshot -- --concurrency 6
+npm run typecheck
 npm run build
 ```
 
-The snapshot script reads `GET /seats/records`, `GET /api/agents/:tokenId` for every seat with records and `GET /wallets/:address/earnings` for every owner wallet, then writes `public/snapshot/seats.json` (about 116 KB) and `public/snapshot/earnings.json` (about 400 KB, six newest allocations per wallet plus counts). Run it before each publish, or on a schedule (a cron job or CI workflow), so the fallback stays fresh. The site shows the snapshot timestamp wherever snapshot values are used.
+The script reads only public endpoints. A partial `--limit` snapshot is unsuitable for rankings and is marked incomplete. Its source files are in `public/snapshot/` and copied into `dist/snapshot/` by Vite.
 
-## Publish to IPFS
+The footer's Data source settings accepts **one trusted first-party HTTPS base URL**, stored in `localStorage` as `simcard:apiBase`. Leave it empty for official origins. A future proxy at `https://first-party.example/public` must forward:
 
-The export is a plain folder. Any of these work:
+| Requested path | Official upstream |
+| --- | --- |
+| `/public/seats/*` | `https://api.imd.fun/seats/*` |
+| `/public/wallets/*` | `https://api.imd.fun/wallets/*` |
+| `/public/explorer/*` | `https://explorer.imd.fun/*` |
 
-```bash
-# Kubo (go-ipfs)
-ipfs add -r --cid-version 1 dist
-# -> pin the printed CID, then open https://<gateway>/ipfs/<CID>/
+It must return upstream response bodies/statuses and permit the frontend origin through CORS. This static export does not include or operate that service. Credentials, query strings and fragments are rejected in the setting. Public verification links always point to the official sites.
 
-# web3.storage / Storacha
-w3 up dist
+If Ethereum itself cannot be read, the site shows a network error with Try again instead of claiming snapshot ownership is current. Public provider range limits can leave acquisition Unavailable even while other onchain reads work.
 
-# Pinata, Fleek, 4EVERLAND: upload the dist/ folder in their dashboard or CLI
-```
+## Export behavior
 
-Point an ENS `contenthash` or a DNSLink at the CID for a stable address. Shareable profile links have the form `https://<gateway>/ipfs/<CID>/#/agent/222`; the QR code on each card encodes the URL the page is actually served from.
+PNG uses the existing 1600×1000 canvas renderer. Video records roughly six seconds at 1280×800 using a supported browser MediaRecorder format (MP4 or WebM). It requires a browser that can record canvas video; an unsupported browser retains PNG export and shows an explanation. The source timestamp is included for snapshot work data. X's web intent supplies a caption and profile URL; attach downloaded media manually. Onscreen Pause and reduced motion do not disable an explicitly requested video export.
 
-Before publishing, replace the relative `og:image` / `twitter:image` values in `index.html` with the absolute gateway URL of `og-image.png` if you want previews on X and other crawlers that require absolute image URLs.
+## Validation performed on 2026-09-29
 
-## Data sources, CORS and limitations
+Final production build and typecheck: **exit 0**. The final `dist/` was tested at the static `/preview/` subpath; source/config mirror parity was checked.
 
-- **CORS.** As of 2026-09-28 neither `api.imd.fun` nor `explorer.imd.fun` sends `Access-Control-Allow-Origin`, so browsers block direct reads from any other origin (verified with `curl -H "Origin: …"` and in headless Chromium: `TypeError: Failed to fetch`). The app still *tries* the official origins first on every load, so it becomes fully live the moment those headers appear. Until then, on IPFS the card shows: artwork, ownership, identity-hash flags and ENS **live from Ethereum** (public RPCs send `Access-Control-Allow-Origin: *`), and work statistics, rank, Explorer handle and allocations **from the snapshot** with its timestamp. Live presence (online / working / offline) is marked *Unavailable* in that mode and the card renders in its dimmed "status unavailable" state.
-- **Operator proxy.** If you host the site behind your own CORS-enabled proxy of the same public routes, open *Data source settings* in the footer and enter the proxy base URLs (stored in `localStorage`, no rebuild needed). The live code path was validated by simulating exactly that in the browser checks below.
-- **Social previews.** A static host cannot vary `<meta>` tags per agent; `index.html` carries site-level Open Graph / Twitter tags and a real card image (`public/og-image.png`, rendered from token 222). The app updates `document.title` per agent for script-executing clients.
-- **Path URLs.** `/agent/222` cannot be served by a static host without rewrites, so the canonical link is `#/agent/222`. If a host does rewrite paths, or a link uses `?agent=222`, the app folds it into the hash form on load.
-- **Privacy.** Only fields the official API exposes publicly are shown. Platform details in the standing record (OS, architecture, Node version) and anything resembling device or infrastructure data are never rendered. Full wallet addresses are hidden by default; the expanded profile shows a shortened address with a Copy button.
-- **Video on X.** X's web intent cannot attach media; the page tells the user to download the video and attach it manually.
-- **Earnings scope.** The API's earnings route currently lists launch allocations (Sepolia launches at the time of writing). The live mode shows the full list summary and newest allocations; the snapshot keeps the six newest per wallet.
+- **26 browser checks passed**: search/invalid input/loading, direct and malformed hash routes, clipboard/X URL, native modal/Escape/reopen, disclosures, recent-work expansion, pause/reduced motion, Refresh, partial and unavailable sources, one proxy base, missing NFT and network recovery.
+- **19 acquisition/RPC regression tests passed**, including latest log ordering, contiguous scans, different token/contract, reorgs, ownership/head changes and partial RPC errors.
+- **31 data assertions passed**: missing versus zero, presence, ranking ties/cohort completeness, allocation pagination and identity matching.
+- Real PNG and video encoding/downloads passed with fixture records. The PNG's QR decoded to the exact current profile URL; the video decoded at 1280×800 with 5.989 seconds duration.
+- No horizontal overflow at 320, 390, 820 or 1280px. Screenshot review also covered 1440px and final 320px snapshot cards. Measured opaque dashboard text samples met their contrast thresholds; see the full coverage record.
 
-## Validation performed
+**Limits:** worker and browser requests to the three real RPC endpoints were blocked (HTTP 403/network failures); the actual acquisition date and real live onchain export could not be certified here. Live-state browser tests used explicit synthetic API/RPC fixtures; the bundled API snapshot is real. Screenshots marked `fixture` use synthetic artwork/data. Screen-reader sessions, native 200% zoom, physical devices, Safari/Firefox and a published IPFS round trip were not performed. Axe's inconclusive contrast nodes are recorded, not counted as passes.
 
-Run on 2026-09-28 against the committed export with a bounded script (`test/scratch/verify/run.mjs`, static server on a random port serving `dist/` under `/preview/`, headless Chromium 1246 via playwright-core, axe-core 4). The scratch folder is not part of the delivery; commands and outcomes:
+The six-domain Better Interface review, findings/fixes, actual commands, screenshots and limitations are in [artifacts/validation.md](artifacts/validation.md); the implemented design is in [DESIGN.md](DESIGN.md). Temporary test scaffolding and generated download samples were kept in `test/scratch/` and are deliberately not submitted.
 
-| Check | Command | Result |
-| --- | --- | --- |
-| Typecheck | `npm run typecheck` | exit 0 |
-| Production build | `npm run build` | exit 0; `dist/index.html`, one JS chunk (≈319 KB, 102 KB gzip), one CSS file, one woff2, snapshot JSON, `og-image.png`, `favicon.svg` |
-| Home, four widths (1280 / 820 / 390 / 320) | `node test/scratch/verify/run.mjs home` | no horizontal overflow, no console errors, axe: 0 violations |
-| Search: invalid input, Enter submit | same | inline error "Enter a whole number between 1 and 2000, such as 222."; `222` + Enter navigates to `#/agent/222` |
-| Agent 222, real network (API blocked by CORS) | `… blocked` | card renders with onchain artwork, ENS `bkm01.eth`, snapshot stats (355 accepted / 452 attempts / 78.5 %), QR alt links to profile URL, warning note explains the snapshot; dialog opens (focus → Close), Escape returns focus to "Open profile"; card click opens dialog; reduced-motion removes animations; axe: 0 violations page and dialog; no overflow at 390 / 320 |
-| Agent 222, live API (CORS proxy simulated in the harness) | `… live` | state `working`, "Verified agent", runtime `codex codex-cli 0.155.1`, live presence, rank (#277 of 509 by accepted), 95 allocations, 10 work rows shown with "Show more"; Refresh re-fetches; Share on X href carries caption + URL; tokens 2 and 42 produce distinct accents (`#eab308`, `#ff3864`); mobile 390 no overflow |
-| States | `… states` | invalid token, unpaired NFT (#1999 renders with owner and "Unavailable" stats), Ethereum unreachable (RPC aborted), loading, offline |
-| Downloads | `… downloads` | `simcard-222.png` 1 719 903 B; `simcard-222.mp4` 1 500 900 B (Chromium picked `video/mp4`); success toasts shown |
-| Social image | `… og` | `public/og-image.png` 1200×630 rendered from the live card |
+## Source map and attribution
 
-Not performed: a screen-reader session, browser-native 200 % zoom (narrow viewports were tested instead), physical-device touch testing, Safari/Firefox runs (video export there falls back to WebM or reports unsupported), and the real IPFS gateway round trip (the export was served from a local static server at a subpath). Details, findings and fixes are in `artifacts/validation.md`; the design system is in `DESIGN.md`.
+`src/data/` handles provenance, public endpoints, snapshots and onchain reads. `src/components/ProfileDialog.tsx` and `src/styles/profile.css` define the dashboard; `src/lib/` retains shared card/export logic. `public/` supplies locally bundled assets and snapshots; `dist/` is the complete static export.
 
-## Project layout
-
-```
-index.html              entry + social meta
-public/                 favicon, og-image.png, snapshot/*.json
-scripts/snapshot.mjs    build-time API snapshot
-src/data/               API clients, onchain reads, palette extraction, profile assembly
-src/lib/                card model, canvas renderer, exports, hooks, formatting
-src/components/         SimCard, ProfileDialog, SearchForm, chrome, shared bits
-src/pages/              HomePage, AgentPage
-src/styles/             tokens.css, base.css, app.css, simcard.css
-dist/                   committed production export
-artifacts/              validation record and screenshots
-```
-
-## License and attribution
-
-Application code: MIT. JetBrains Mono is bundled under the SIL Open Font License 1.1 (via `@fontsource-variable/jetbrains-mono`). Design review followed Jakub Krehel's Better Interface guide (MIT) with documentation guidance adapted from Paul Bakaus's Impeccable (Apache-2.0). IdentityMD, identity.md and the artwork belong to their respective owners; this is an unofficial community tool.
+Design review used Jakub Krehel's Better Interface (MIT), with Paul Bakaus's Impeccable documentation guidance (Apache-2.0). Their pinned license texts are retained in `artifacts/licenses/better-interface-LICENSE`. JetBrains Mono is bundled under SIL OFL through the existing font dependency. IdentityMD branding and NFT artwork belong to their respective owners; SIMCARD is a community tool.

@@ -40,7 +40,7 @@ export function SourcedHeading({ title, sourced }: { title: string; sourced: Sou
 }
 
 export function Unavailable({ note }: { note?: string | null }) {
-  return <span className="unavailable">Unavailable{note ? ` — ${note}` : ''}</span>;
+  return <span className="unavailable unavailable--badge" title={note ?? undefined}>Unavailable{note ? <span className="visually-hidden">: {note}</span> : null}</span>;
 }
 
 export function QrCode({ value, size = 128, className }: { value: string; size?: number; className?: string }) {

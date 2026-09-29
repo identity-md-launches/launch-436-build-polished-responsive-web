@@ -1,0 +1,153 @@
+{
+  "date": "2026-09-29T18:42:06.403Z",
+  "base": "http://127.0.0.1:34563/preview/",
+  "dist": "/tmp/simcard-validation/dist",
+  "results": [
+    {
+      "name": "Invalid search announces error and focuses the input"
+    },
+    {
+      "name": "Token search exposes loading state"
+    },
+    {
+      "name": "Search route, copy link and X intent keep token 222 and /preview/ subpath"
+    },
+    {
+      "name": "Real PNG export is 1600 × 1000 and its decoded QR opens the current profile",
+      "bytes": 1313501
+    },
+    {
+      "name": "Real MediaRecorder video export decodes at 1280 × 800",
+      "width": 1280,
+      "height": 800,
+      "duration": 5.989133,
+      "bytes": 1213019
+    },
+    {
+      "name": "Rendered opaque dashboard text pairs meet measured contrast thresholds",
+      "samples": 89,
+      "minimum": 4.88,
+      "unverified": 0
+    },
+    {
+      "name": "axe-core automated profile check reports no WCAG A/AA violations",
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 158
+        }
+      ]
+    },
+    {
+      "name": "Verification links are collapsed by default and available by keyboard"
+    },
+    {
+      "name": "Show more jobs reveals the remaining recent work"
+    },
+    {
+      "name": "Profile animation pause/resume works"
+    },
+    {
+      "name": "Profile keyboard opening, native focus containment and Escape focus restoration"
+    },
+    {
+      "name": "Profile/card reflow at 320px",
+      "dims": {
+        "viewport": 320,
+        "body": 320,
+        "dialog": [
+          {
+            "width": 320,
+            "scroll": 320
+          }
+        ]
+      },
+      "grid": [
+        "288px"
+      ]
+    },
+    {
+      "name": "Profile/card reflow at 390px",
+      "dims": {
+        "viewport": 390,
+        "body": 390,
+        "dialog": [
+          {
+            "width": 390,
+            "scroll": 390
+          }
+        ]
+      },
+      "grid": [
+        "358px"
+      ]
+    },
+    {
+      "name": "Profile/card reflow at 820px",
+      "dims": {
+        "viewport": 820,
+        "body": 820,
+        "dialog": [
+          {
+            "width": 780,
+            "scroll": 780
+          }
+        ]
+      },
+      "grid": [
+        "740px"
+      ]
+    },
+    {
+      "name": "Profile/card reflow at 1280px",
+      "dims": {
+        "viewport": 1280,
+        "body": 1280,
+        "dialog": [
+          {
+            "width": 1214,
+            "scroll": 1214
+          }
+        ]
+      },
+      "grid": [
+        "565px 565px"
+      ]
+    },
+    {
+      "name": "Refresh bypasses cache and replaces working state with offline state"
+    },
+    {
+      "name": "Reduced motion disables card orbit, pulse and scan animations"
+    },
+    {
+      "name": "Required public sources requested; no runtime errors or local asset failures"
+    },
+    {
+      "name": "Official API network/CORS failure uses timestamped bundled snapshot and unavailable live values",
+      "snapshotAt": "2026-09-29T18:34:26.258Z"
+    },
+    {
+      "name": "Transfer log failure still opens profile without a made-up acquisition date"
+    },
+    {
+      "name": "Incomplete API fields stay unavailable instead of fabricated zero/offline values"
+    },
+    {
+      "name": "One configured trusted base URL routes API and Explorer reads"
+    },
+    {
+      "name": "Malformed percent-encoded route gives invalid-token state without crashing"
+    },
+    {
+      "name": "Invalid direct hash route gives recoverable error state"
+    },
+    {
+      "name": "Nonexistent token has a retry/search error state"
+    },
+    {
+      "name": "Ethereum network error recovers through Try again"
+    }
+  ],
+  "errors": []
+}

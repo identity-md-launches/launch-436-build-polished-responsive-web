@@ -5,7 +5,7 @@ import { QrCode } from './common';
 
 interface Props {
   model: CardModel;
-  onOpen: () => void;
+  onOpen?: () => void;
   staticRender?: boolean;
 }
 
@@ -38,16 +38,16 @@ export function SimCard({ model, onOpen, staticRender = false }: Props) {
   const handleClick = (event: MouseEvent<HTMLElement>) => {
     const target = event.target as HTMLElement;
     if (target.closest('a, button')) return;
-    onOpen();
+    onOpen?.();
   };
 
   return (
     <div className="simcard-frame">
       <article
-        className={`simcard simcard--${model.state}${staticRender ? ' simcard--static' : ''}`}
+        className={`simcard simcard--${model.state}${staticRender ? ' simcard--static' : ''}${!onOpen ? ' simcard--display' : ''}`}
         style={style}
         onClick={handleClick}
-        aria-label={`SIMCARD for identity.md ${model.number}. ${model.stateLabel}. Select to open the full profile.`}
+        aria-label={`SIMCARD for identity.md ${model.number}. ${model.stateLabel}.${onOpen ? ' Select to open the full profile.' : ''}`}
         data-testid="simcard"
       >
         <span className="simcard__chip" aria-hidden="true" />
@@ -118,6 +118,7 @@ export function SimCard({ model, onOpen, staticRender = false }: Props) {
               <span>
                 Last activity <b>{model.lastActivity}</b>
               </span>
+              <span>{model.dataLabel}</span>
               <span>Scan for the public profile</span>
             </div>
             <div className="simcard__qr">

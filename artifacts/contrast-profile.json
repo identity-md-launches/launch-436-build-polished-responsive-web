@@ -1,0 +1,625 @@
+[
+  {
+    "text": "Identity",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "Owner wallet",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Agent ID",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Explorer handle",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Sep 29, 2026, 18:41 UTC",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Held for",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "34 days",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 3
+  },
+  {
+    "text": "Acquired",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "Aug 26, 2026",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "Ethereum · UTC",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Verified from this NFT’s latest ",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "Live status",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "Sep 29, 2026, 18:41 UTC",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Last activity",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "just now",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 3
+  },
+  {
+    "text": "Queue · ready",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "3",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 3
+  },
+  {
+    "text": "Sep 29, 2026, 18:41 UTC",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Runtime",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Sep 29, 2026, 18:41 UTC",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Running jobs",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Accepting work",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Last heartbeat",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Performance",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "Sep 29, 2026, 18:41 UTC",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Accepted work",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "80",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 3
+  },
+  {
+    "text": "Acceptance rate",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "80.0%",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 3
+  },
+  {
+    "text": "Attempts",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "100",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 3
+  },
+  {
+    "text": "Rejected",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "7",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 3
+  },
+  {
+    "text": "Failed",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "8",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 3
+  },
+  {
+    "text": "Pending",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "5",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 3
+  },
+  {
+    "text": "Acceptance rate = accepted ÷ all",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "Rankings",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "Sep 29, 2026, 18:41 UTC",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Accepted-work rank",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "#2",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 3
+  },
+  {
+    "text": "of 3 recorded agents",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Percentile",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "50%",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 3
+  },
+  {
+    "text": "By accepted work",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Attempts rank",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "#2",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 3
+  },
+  {
+    "text": "Acceptance-rate rank",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "#1",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 3
+  },
+  {
+    "text": "of 3 eligible agents",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Ties share a rank. Rate ranking ",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "Rewards and launch allocations",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "Sep 29, 2026, 18:41 UTC",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Launch allocations",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "2",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 3
+  },
+  {
+    "text": "Payouts",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "Unavailable: Launch allocations ",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 3
+  },
+  {
+    "text": "Unavailable: Launch allocations ",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(27, 32, 40)",
+    "ratio": 7.87,
+    "required": 4.5
+  },
+  {
+    "text": "Not reported by public sources.",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Current owner’s wallet · may inc",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "Showing 2 recent allocations.",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "Work history",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "Sep 29, 2026, 18:41 UTC",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Job job-0-lo ↗",
+    "foreground": "rgb(195, 119, 245)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 4.88,
+    "required": 4.5
+  },
+  {
+    "text": "Job job-1-lo ↗",
+    "foreground": "rgb(195, 119, 245)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 4.88,
+    "required": 4.5
+  },
+  {
+    "text": "Job job-2-lo ↗",
+    "foreground": "rgb(195, 119, 245)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 4.88,
+    "required": 4.5
+  },
+  {
+    "text": "Job job-3-lo ↗",
+    "foreground": "rgb(195, 119, 245)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 4.88,
+    "required": 4.5
+  },
+  {
+    "text": "Job job-4-lo ↗",
+    "foreground": "rgb(195, 119, 245)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 4.88,
+    "required": 4.5
+  },
+  {
+    "text": "#223",
+    "foreground": "rgb(195, 119, 245)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 4.88,
+    "required": 4.5
+  },
+  {
+    "text": "Reviews",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "Sep 29, 2026, 18:41 UTC",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Job job-0-lo ↗",
+    "foreground": "rgb(195, 119, 245)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 4.88,
+    "required": 4.5
+  },
+  {
+    "text": "Review transaction ↗",
+    "foreground": "rgb(195, 119, 245)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 4.88,
+    "required": 4.5
+  },
+  {
+    "text": "Onchain verification links and p",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "Ethereum mainnet · IdentityMD ER",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  },
+  {
+    "text": "Etherscan NFT record",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "Acquisition Transfer · block 24,",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "IdentityMD Explorer agent page",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "OpenSea listing",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "Owner wallet on Etherscan",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "Seat API · JSON",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "Standing API · JSON",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "Rankings source · JSON",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "Wallet earnings API · JSON",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "Explorer launches",
+    "foreground": "rgb(244, 246, 250)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 13.01,
+    "required": 4.5
+  },
+  {
+    "text": "Identity hash",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Hash locked",
+    "foreground": "rgb(169, 181, 197)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 6.77,
+    "required": 4.5
+  },
+  {
+    "text": "Refresh retries the official sou",
+    "foreground": "rgb(193, 202, 214)",
+    "background": "rgb(37, 44, 54)",
+    "ratio": 8.5,
+    "required": 4.5
+  }
+]

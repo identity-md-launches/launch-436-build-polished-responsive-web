@@ -3,3 +3,18 @@ test/scratch/
 .vite/
 *.log
 .DS_Store
+
+# Explicit delivery path budget: the eight files below together <= 524288 bytes.
+# Only these validation records, screenshots and license are allowed; no caches.
+!artifacts/
+artifacts/*
+!artifacts/validation.md
+!artifacts/interaction-results.json
+!artifacts/contrast-profile.json
+!artifacts/profile-desktop-fixture.jpg
+!artifacts/dashboard-desktop-fixture.jpg
+!artifacts/profile-mobile-fixture.jpg
+!artifacts/dashboard-mobile-snapshot.jpg
+!artifacts/licenses/
+artifacts/licenses/*
+!artifacts/licenses/better-interface-LICENSE

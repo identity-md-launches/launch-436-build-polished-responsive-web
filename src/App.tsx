@@ -19,7 +19,7 @@ export function App() {
 
   return (
     <>
-      <a className="skip-link" href="#main">
+      <a className="skip-link" href="#main" onClick={(event) => { event.preventDefault(); document.getElementById('main')?.focus(); }}>
         Skip to content
       </a>
       <Header />
@@ -29,7 +29,7 @@ export function App() {
         {route.name === 'invalid' ? (
           <div className="container">
             <section className="state state--error" aria-labelledby="invalid-title">
-              <h2 id="invalid-title">Invalid token ID</h2>
+              <h1 id="invalid-title" className="page-title">Invalid token ID</h1>
               <p role="alert">
                 “{route.raw}” is not an identity.md token. Use a whole number between {MIN_TOKEN_ID} and {MAX_TOKEN_ID}.
               </p>

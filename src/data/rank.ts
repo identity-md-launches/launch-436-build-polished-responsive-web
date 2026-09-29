@@ -1,7 +1,7 @@
 export interface RankInput {
   tokenId: string;
-  attempts: number;
-  accepted: number;
+  attempts: number | null;
+  accepted: number | null;
 }
 
 export interface Rank {
@@ -19,12 +19,18 @@ export function computeRank(seats: RankInput[], tokenId: string): Rank | null {
   const me = seats.find((s) => s.tokenId === tokenId);
   if (!me) return null;
   const total = seats.length;
-  const byAccepted = 1 + seats.filter((s) => s.accepted > me.accepted).length;
-  const byAttempts = 1 + seats.filter((s) => s.attempts > me.attempts).length;
-  const cohort = seats.filter((s) => s.attempts >= MIN_ATTEMPTS_FOR_RATE);
-  const rate = (s: RankInput) => (s.attempts > 0 ? s.accepted / s.attempts : 0);
-  const inCohort = me.attempts >= MIN_ATTEMPTS_FOR_RATE;
-  const byAcceptanceRate = inCohort ? 1 + cohort.filter((s) => rate(s) > rate(me)).length : null;
-  const percentile = total > 1 ? Math.round((seats.filter((s) => s.accepted < me.accepted).length / (total - 1)) * 100) : null;
+  const acceptedComplete = seats.every((s) => s.accepted !== null && Number.isFinite(s.accepted));
+  const attemptsComplete = seats.every((s) => s.attempts !== null && Number.isFinite(s.attempts));
+  const byAccepted = acceptedComplete && me.accepted !== null
+    ? 1 + seats.filter((s) => s.accepted! > me.accepted!).length : null;
+  const byAttempts = attemptsComplete && me.attempts !== null
+    ? 1 + seats.filter((s) => s.attempts! > me.attempts!).length : null;
+  const cohort = seats.filter((s) => s.attempts !== null && s.attempts >= MIN_ATTEMPTS_FOR_RATE && s.accepted !== null);
+  const inCohort = me.attempts !== null && me.attempts >= MIN_ATTEMPTS_FOR_RATE && me.accepted !== null;
+  const rate = (s: RankInput) => s.accepted! / s.attempts!;
+  const byAcceptanceRate = acceptedComplete && attemptsComplete && inCohort
+    ? 1 + cohort.filter((s) => rate(s) > rate(me)).length : null;
+  const percentile = acceptedComplete && me.accepted !== null && total > 1
+    ? Math.round((seats.filter((s) => s.accepted! < me.accepted!).length / (total - 1)) * 100) : null;
   return { total, byAccepted, byAttempts, byAcceptanceRate, rateCohort: cohort.length, percentile };
 }

@@ -22,41 +22,43 @@ export const MIN_TOKEN_ID = 1;
 export const CACHE_TTL_MS = 60_000;
 export const REQUEST_TIMEOUT_MS = 20_000;
 
-// Optional operator overrides. A site owner who fronts the official API with a
-// CORS-enabled proxy can point the app at it without rebuilding.
+// One optional trusted first-party proxy. It forwards /seats and /wallets to
+// api.imd.fun, and /explorer/* to explorer.imd.fun. No public CORS relay is used.
 const STORAGE_API = 'simcard:apiBase';
-const STORAGE_EXPLORER = 'simcard:explorerBase';
 
-function readOverride(key: string): string | null {
+function readOverride(): string | null {
   try {
-    const value = window.localStorage.getItem(key);
-    return value && /^https?:\/\//.test(value) ? value.replace(/\/+$/, '') : null;
+    const value = window.localStorage.getItem(STORAGE_API)?.trim();
+    if (!value) return null;
+    const url = new URL(value);
+    return url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash
+      ? url.toString().replace(/\/+$/, '') : null;
   } catch {
     return null;
   }
 }
 
 export function getApiBase(): string {
-  return readOverride(STORAGE_API) ?? OFFICIAL_API_BASE;
+  return readOverride() ?? OFFICIAL_API_BASE;
 }
 
 export function getExplorerBase(): string {
-  return readOverride(STORAGE_EXPLORER) ?? OFFICIAL_EXPLORER_BASE;
+  const base = readOverride();
+  return base ? `${base}/explorer` : OFFICIAL_EXPLORER_BASE;
 }
 
-export function setOverrides(apiBase: string, explorerBase: string): void {
+export function setOverrides(apiBase: string): void {
   try {
     if (apiBase.trim()) window.localStorage.setItem(STORAGE_API, apiBase.trim());
     else window.localStorage.removeItem(STORAGE_API);
-    if (explorerBase.trim()) window.localStorage.setItem(STORAGE_EXPLORER, explorerBase.trim());
-    else window.localStorage.removeItem(STORAGE_EXPLORER);
+    window.localStorage.removeItem('simcard:explorerBase');
   } catch {
-    // Storage may be unavailable (private mode); overrides are optional.
+    // Storage is optional; the official endpoints remain the default.
   }
 }
 
-export function getOverrides(): { apiBase: string; explorerBase: string } {
-  return { apiBase: readOverride(STORAGE_API) ?? '', explorerBase: readOverride(STORAGE_EXPLORER) ?? '' };
+export function getOverrides(): { apiBase: string } {
+  return { apiBase: readOverride() ?? '' };
 }
 
 export const LINKS = {

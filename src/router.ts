@@ -12,7 +12,10 @@ export function parseRoute(hash: string): Route {
   if (!clean) return { name: 'home' };
   const m = /^agent\/(.+)$/.exec(clean);
   if (!m) return { name: 'invalid', raw: clean };
-  const tokenId = parseTokenId(decodeURIComponent(m[1] ?? ''));
+  let decoded: string;
+  try { decoded = decodeURIComponent(m[1] ?? ''); }
+  catch { return { name: 'invalid', raw: m[1] ?? '' }; }
+  const tokenId = parseTokenId(decoded);
   return tokenId === null ? { name: 'invalid', raw: m[1] ?? '' } : { name: 'agent', tokenId };
 }
 

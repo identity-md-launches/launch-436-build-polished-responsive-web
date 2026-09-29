@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type FormEvent } from 'react';
 import { getOverrides, OFFICIAL_API_BASE, OFFICIAL_EXPLORER_BASE, setOverrides } from '../data/config';
 
 export function Header() {
@@ -25,19 +25,26 @@ export function Header() {
 function DataSourceSettings() {
   const initial = getOverrides();
   const [apiBase, setApiBase] = useState(initial.apiBase);
-  const [explorerBase, setExplorerBase] = useState(initial.explorerBase);
   const [saved, setSaved] = useState<string | null>(null);
   const apiId = useId();
-  const explorerId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [invalid, setInvalid] = useState(false);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    const valid = (v: string) => v.trim() === '' || /^https?:\/\/[^\s]+$/.test(v.trim());
-    if (!valid(apiBase) || !valid(explorerBase)) {
-      setSaved('Use a full URL starting with https://, or leave the field empty.');
+    const valid = (v: string) => {
+      if (!v.trim()) return true;
+      try { const url = new URL(v.trim()); return url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash; }
+      catch { return false; }
+    };
+    if (!valid(apiBase)) {
+      setInvalid(true);
+      inputRef.current?.focus();
+      setSaved('Use an HTTPS URL without credentials, query or fragment, or leave empty.');
       return;
     }
-    setOverrides(apiBase, explorerBase);
+    setInvalid(false);
+    setOverrides(apiBase);
     setSaved('Saved. Reload the page or press Refresh on a card to use the new sources.');
   };
 
@@ -46,23 +53,18 @@ function DataSourceSettings() {
       <summary>Data source settings</summary>
       <form onSubmit={submit}>
         <p>
-          Both official origins currently omit CORS headers, so browsers cannot read them directly from a static site. If you
-          run this site behind your own CORS-enabled proxy of the same public routes, point the app at it here. Leave empty to
-          use the official origins ({OFFICIAL_API_BASE} and {OFFICIAL_EXPLORER_BASE}).
+          Optional: use a trusted first-party proxy when browser requests to the official sources are blocked.
+          Leave empty to retry {OFFICIAL_API_BASE} and {OFFICIAL_EXPLORER_BASE} directly.
         </p>
         <div className="field">
-          <label htmlFor={apiId}>API base URL (optional)</label>
-          <input id={apiId} type="url" inputMode="url" autoComplete="url" placeholder="https://your-proxy.example/api" value={apiBase} onChange={(e) => setApiBase(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor={explorerId}>Explorer base URL (optional)</label>
-          <input id={explorerId} type="url" inputMode="url" autoComplete="url" placeholder="https://your-proxy.example/explorer" value={explorerBase} onChange={(e) => setExplorerBase(e.target.value)} />
+          <label htmlFor={apiId}>Trusted first-party base URL (optional)</label>
+          <input ref={inputRef} aria-invalid={invalid || undefined} aria-describedby={`${apiId}-result`} id={apiId} type="url" inputMode="url" autoComplete="url" placeholder="https://your-proxy.example/api" value={apiBase} onChange={(e) => setApiBase(e.target.value)} />
         </div>
         <div className="cluster">
           <button type="submit" className="btn btn--sm">
-            Save data sources
+            Save data source
           </button>
-          <span role="status" aria-live="polite">
+          <span id={`${apiId}-result`} role="status" aria-live="polite">
             {saved}
           </span>
         </div>

@@ -232,7 +232,7 @@ export function drawCard(
   ctx.stroke();
   ctx.fillStyle = '#6b6b78';
   ctx.font = `400 16px ${FONT}`;
-  ctx.fillText('IDENTITYMD · SIMCARD', chipX + 72, chipY + 28);
+  ctx.fillText(model.dataLabel.toUpperCase(), chipX + 72, chipY + 28);
 
   // Text column ---------------------------------------------------------------
   const tx = pad + artSize + 56;
