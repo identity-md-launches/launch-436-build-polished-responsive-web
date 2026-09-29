@@ -2,13 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ProfileDialog } from '../components/ProfileDialog';
 import { SearchForm } from '../components/SearchForm';
 import { SimCard } from '../components/SimCard';
-import { CopyButton, SourceTag, StatusBadge } from '../components/common';
+import { CopyButton, LiveIndicator, SourceTag, StatusBadge } from '../components/common';
 import { Toast } from '../components/Chrome';
 import type { AgentProfile } from '../data/profile';
 import { buildCardModel } from '../lib/cardModel';
 import { exportPng, exportVideo, pickVideoMime, xIntentUrl } from '../lib/exports';
 import { formatDateTime } from '../lib/format';
-import { useProfile, useReducedMotion, useToast } from '../lib/hooks';
+import { useNow, useProfile, useReducedMotion, useToast } from '../lib/hooks';
 import { profileShareUrl } from '../router';
 
 interface Props {
@@ -33,7 +33,7 @@ export function AgentPage({ tokenId, onSnapshotAt }: Props) {
     return (
       <div className="container stack" aria-busy="true">
         <p className="status-line" role="status">
-          <span className="spinner" aria-hidden="true" /> Reading identity.md #{tokenId} from Ethereum and the IdentityMD API…
+          <span className="spinner" aria-hidden="true" /> Reading identity.md #{tokenId} from Ethereum and the live IdentityMD network…
         </p>
         <div className="skeleton-card" aria-hidden="true" />
       </div>
@@ -84,6 +84,7 @@ function LoadedAgent({ profile, shareUrl, refreshing, errorMessage, onRefresh }:
   const [videoProgress, setVideoProgress] = useState(0);
   const openButtonRef = useRef<HTMLButtonElement>(null);
   const toast = useToast();
+  const now = useNow(1000);
   const reducedMotion = useReducedMotion();
   const [motionPaused, setMotionPaused] = useState(false);
   const paused = reducedMotion || motionPaused;
@@ -102,7 +103,7 @@ function LoadedAgent({ profile, shareUrl, refreshing, errorMessage, onRefresh }:
   }, [model.palette]);
 
   useEffect(() => {
-    if (errorMessage) toast.show(`Refresh failed: ${errorMessage}`, 'alert');
+    if (errorMessage) toast.show(`Refresh did not complete. ${errorMessage}`, 'alert');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [errorMessage]);
 
@@ -137,20 +138,23 @@ function LoadedAgent({ profile, shareUrl, refreshing, errorMessage, onRefresh }:
   };
 
   const apiNote = profile.apiStatus === 'live' ? null
-    : profile.apiStatus === 'offline' ? 'Offline. Snapshot values are labeled with their capture time.'
-    : 'Some official sources could not be read. Showing dated snapshots where available; Refresh retries live data.';
+    : profile.apiStatus === 'offline' ? 'You appear to be offline. Earlier live values and dated snapshot values are shown.'
+    : profile.live.swarmAt ? 'The live network view could not be refreshed. Earlier live values are kept until it answers again.'
+    : 'The live network view is not answering. Explorer, onchain and snapshot values are shown where available.';
+  const chainNote = profile.chainReachable ? null : 'Ethereum could not be read, so ownership and artwork come from public IdentityMD records until Refresh succeeds.';
 
   return (
     <div className="container agent-layout">
       <div className="stack" style={{ gap: 'var(--space-5)' }}>
         <h1 className="page-title">SIMCARD · identity.md {model.number}</h1>
         <div className="status-line">
-          <StatusBadge state={model.state} />
+          <StatusBadge state={model.state} label={model.stateLabel} />
+          <LiveIndicator at={profile.live.at} ok={profile.live.ok} now={now} />
           <span>
-            Seat data <SourceTag source={profile.seat.source} at={profile.seat.at} note={profile.seat.note} />
+            Work data <SourceTag source={profile.stats.attempts.source} at={profile.stats.attempts.at} note={profile.stats.attempts.note} />
           </span>
           <span>
-            Presence <SourceTag source={profile.standing.source} at={profile.standing.at} note={profile.standing.note} />
+            Presence <SourceTag source={profile.presence.source} at={profile.presence.at} />
           </span>
           <span>
             Artwork <SourceTag source={profile.artwork.source} at={profile.artwork.at} note={profile.artwork.note} />
@@ -158,7 +162,8 @@ function LoadedAgent({ profile, shareUrl, refreshing, errorMessage, onRefresh }:
         </div>
         <SimCard model={model} onOpen={() => setDialogOpen(true)} staticRender={paused || dialogOpen} />
         <div className="cluster"><button type="button" className="btn btn--sm" onClick={() => setMotionPaused(p => !p)} disabled={reducedMotion}>{paused ? 'Resume animation' : 'Pause animation'}</button>{apiNote ? <p className="note">{apiNote}</p> : null}</div>
-        {profile.seat.source === 'snapshot' && profile.seat.at ? <p className="note">Snapshot captured <time dateTime={profile.seat.at}>{formatDateTime(profile.seat.at)}</time></p> : null}
+        {chainNote ? <p className="note note--warn">{chainNote}</p> : null}
+        {profile.stats.attempts.source === 'snapshot' && profile.stats.attempts.at ? <p className="note">Snapshot captured <time dateTime={profile.stats.attempts.at}>{formatDateTime(profile.stats.attempts.at)}</time></p> : null}
         {reducedMotion ? <p className="note">Card animation is paused because your system prefers reduced motion. Exports still animate.</p> : null}
       </div>
 

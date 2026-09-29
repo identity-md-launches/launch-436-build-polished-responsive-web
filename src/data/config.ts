@@ -5,10 +5,22 @@ export const OFFICIAL_API_BASE = 'https://api.imd.fun';
 export const OFFICIAL_EXPLORER_BASE = 'https://explorer.imd.fun';
 
 // Browser-safe JSON-RPC endpoints (they answer with Access-Control-Allow-Origin: *).
+// Plain eth_call batches (ownerOf, tokenURI, ENS) go to the fast general
+// endpoints first. Transfer history needs eth_getLogs over the whole chain: on
+// 2026-09-29 rpc.mevblocker.io served a whole-range query for one token,
+// rpc.flashbots.net served 50,000-block windows, and publicnode limited logs to
+// recent blocks. Keeping the two lists apart spreads load, because mevblocker
+// rate-limits bursts (HTTP 429).
 export const RPC_ENDPOINTS = [
   'https://ethereum-rpc.publicnode.com',
+  'https://rpc.mevblocker.io',
+  'https://rpc.flashbots.net',
   'https://cloudflare-eth.com',
-  'https://eth.llamarpc.com',
+];
+export const LOG_RPC_ENDPOINTS = [
+  'https://rpc.mevblocker.io',
+  'https://rpc.flashbots.net',
+  'https://ethereum-rpc.publicnode.com',
 ];
 
 export const CHAIN_ID = 1;
@@ -21,9 +33,13 @@ export const MIN_TOKEN_ID = 1;
 
 export const CACHE_TTL_MS = 60_000;
 export const REQUEST_TIMEOUT_MS = 20_000;
+// /swarm is cached server-side for about 10 seconds; polling faster gains nothing.
+export const LIVE_REFRESH_MS = 10_000;
 
-// One optional trusted first-party proxy. It forwards /seats and /wallets to
-// api.imd.fun, and /explorer/* to explorer.imd.fun. No public CORS relay is used.
+// One optional trusted first-party proxy. It forwards /swarm, /seats and
+// /wallets to api.imd.fun, and /explorer/* to explorer.imd.fun. No public CORS
+// relay is used. /swarm already answers browsers directly, so the official
+// origin is always tried for it first.
 const STORAGE_API = 'simcard:apiBase';
 
 function readOverride(): string | null {
@@ -72,9 +88,12 @@ export const LINKS = {
   etherscanTokenAddress: (chainId: number, address: string) =>
     chainId === 11155111 ? `https://sepolia.etherscan.io/token/${address}` : `https://etherscan.io/token/${address}`,
   opensea: (tokenId: number) => `https://opensea.io/assets/ethereum/${COLLECTION_ADDRESS}/${tokenId}`,
+  apiSwarm: `${OFFICIAL_API_BASE}/swarm`,
+  apiRecords: `${OFFICIAL_API_BASE}/seats/records`,
   apiSeat: (tokenId: number) => `${OFFICIAL_API_BASE}/seats/${tokenId}`,
   apiStanding: (tokenId: number) => `${OFFICIAL_API_BASE}/seats/${tokenId}/standing`,
   apiEarnings: (address: string) => `${OFFICIAL_API_BASE}/wallets/${address}/earnings`,
+  explorerApiAgent: (tokenId: number) => `${OFFICIAL_EXPLORER_BASE}/api/agents/${tokenId}`,
 };
 
 export function chainLabel(chainId: number): string {

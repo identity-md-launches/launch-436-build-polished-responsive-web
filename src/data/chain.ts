@@ -2,7 +2,7 @@
 // logs never need a signer, wallet provider or transaction submission.
 
 import { keccak_256 } from '@noble/hashes/sha3';
-import { COLLECTION_ADDRESS, ENS_REGISTRY, RPC_ENDPOINTS } from './config';
+import { COLLECTION_ADDRESS, ENS_REGISTRY, LOG_RPC_ENDPOINTS, RPC_ENDPOINTS } from './config';
 import { HttpError, postJson } from './http';
 
 type RpcResponse<T = string> = { id: number; result?: T; error?: { code: number; message: string } };
@@ -238,10 +238,12 @@ function latestTransfer(logs: unknown, tokenTopic: string, fromBlock: number, to
  * Public RPC history limits vary: try the complete range, then contiguous
  * backwards windows (50,000 down to 1,000 blocks). A 25-second / 64-request
  * overall budget keeps a static page usable. Unscanned history, a reorg, an
- * ownership race, advancing head, or a failed proof returns null; callers show
- * Unavailable. The final head must still match even if ownerOf is unchanged:
- * a transfer away and back, or a self-transfer, also resets acquisition time.
+ * ownership race, or a failed proof returns null; callers show Unavailable.
+ * The pinned head must still be canonical even if ownerOf is unchanged: a
+ * transfer away and back, or a self-transfer, also resets acquisition time.
  */
+const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+
 export async function readAcquisition(tokenId: number, owner: string): Promise<Acquisition | null> {
   if (!Number.isSafeInteger(tokenId) || tokenId < 0 || !/^0x[0-9a-f]{40}$/i.test(owner) || /^0x0{40}$/i.test(owner)) return null;
   const expectedOwner = owner.toLowerCase();
@@ -249,24 +251,40 @@ export async function readAcquisition(tokenId: number, owner: string): Promise<A
   const deadline = Date.now() + ACQUISITION_BUDGET_MS;
   let requests = 0;
 
-  for (const endpoint of RPC_ENDPOINTS) {
-    const request = async <T,>(method: string, params: unknown[]): Promise<T> => {
+  for (const endpoint of LOG_RPC_ENDPOINTS) {
+    // Several JSON-RPC calls travel in one HTTP request where they do not
+    // depend on each other, which keeps a page load under public rate limits.
+    // One HTTP 429 is retried once after a short pause; a second moves on.
+    const batch = async (calls: { method: string; params: unknown[] }[]): Promise<unknown[]> => {
       const remaining = deadline - Date.now();
       if (remaining <= 0 || requests >= ACQUISITION_MAX_REQUESTS) throw new Error('Acquisition lookup budget reached');
       requests += 1;
-      const id = requests;
-      const response = await postJson<RpcResponse<T>>(
-        endpoint, { jsonrpc: '2.0', id, method, params }, Math.min(6_000, remaining),
-      );
-      if (response.error) throw new RpcReadError(response.error.message);
-      if (response.id !== id || response.result === undefined) throw new Error('Incomplete RPC response');
-      return response.result;
+      const base = requests * 16;
+      const body = calls.map((call, i) => ({ jsonrpc: '2.0', id: base + i, ...call }));
+      let responses: RpcResponse<unknown>[] | RpcResponse<unknown>;
+      try {
+        responses = await postJson<RpcResponse<unknown>[] | RpcResponse<unknown>>(endpoint, body, Math.min(6_000, remaining));
+      } catch (error) {
+        if (!(error instanceof HttpError && error.status === 429) || deadline - Date.now() < 3_000) throw error;
+        await sleep(1_500);
+        requests += 1;
+        responses = await postJson<RpcResponse<unknown>[] | RpcResponse<unknown>>(endpoint, body, Math.min(6_000, deadline - Date.now()));
+      }
+      const list = Array.isArray(responses) ? responses : [responses];
+      const byId = new Map(list.map((r) => [r.id, r]));
+      return calls.map((_, i) => {
+        const r = byId.get(base + i);
+        if (r?.error) throw new RpcReadError(r.error.message);
+        if (!r || r.result === undefined) throw new Error('Incomplete RPC response');
+        return r.result;
+      });
     };
+    const request = async <T,>(method: string, params: unknown[]): Promise<T> => (await batch([{ method, params }]))[0] as T;
     try {
-      const [chainId, headResult] = await Promise.all([
-        request<string>('eth_chainId', []),
-        request<RpcBlock | null>('eth_getBlockByNumber', ['latest', false]),
-      ]);
+      const [chainId, headResult] = await batch([
+        { method: 'eth_chainId', params: [] },
+        { method: 'eth_getBlockByNumber', params: ['latest', false] },
+      ]) as [string, RpcBlock | null];
       if (quantity(chainId) !== 1) throw new Error('Not Ethereum mainnet');
       const head = blockData(headResult);
       const headNumber = quantity(head.number);
@@ -291,33 +309,58 @@ export async function readAcquisition(tokenId: number, owner: string): Promise<A
         if (!(error instanceof RpcReadError)) throw error;
         let to = headNumber;
         let span = 50_000;
+        let retried = false;
         while (to >= 0 && !event) {
           const from = Math.max(0, to - span + 1);
           try {
             event = latestTransfer(await getLogs(from, to), tokenTopic, from, to);
             to = from - 1;
+            retried = false;
           } catch (windowError) {
-            if (!(windowError instanceof RpcReadError) || span <= 1_000) throw windowError;
+            if (!(windowError instanceof RpcReadError)) throw windowError;
+            // "service temporarily unavailable" is not a range limit: retry the
+            // same window once after a pause before shrinking it.
+            if (!retried && /unavailable|timeout|timed out|internal|try again/i.test(windowError.message)) {
+              retried = true;
+              await sleep(1_000);
+              continue;
+            }
+            if (span <= 1_000) throw windowError;
             span = Math.max(1_000, Math.floor(span / 2));
+            retried = false;
           }
         }
         if (!event) return null;
       }
 
       if (decodeAddress(event.topics[2] ?? '').toLowerCase() !== expectedOwner) return null;
-      const [acquisitionResult, currentOwner] = await Promise.all([
-        request<RpcBlock | null>('eth_getBlockByNumber', [event.blockNumber, false]),
-        request<string>('eth_call', [{ to: COLLECTION_ADDRESS, data: SEL.ownerOf + encodeUint(tokenId) }, 'latest']),
-      ]);
+      // The final head is read in the same batch, after the proof block and the
+      // owner check, so nothing here can observe a state older than the logs.
+      const [acquisitionResult, currentOwner, confirmedResult] = await batch([
+        { method: 'eth_getBlockByNumber', params: [event.blockNumber, false] },
+        { method: 'eth_call', params: [{ to: COLLECTION_ADDRESS, data: SEL.ownerOf + encodeUint(tokenId) }, 'latest'] },
+        { method: 'eth_getBlockByNumber', params: ['latest', false] },
+      ]) as [RpcBlock | null, string, RpcBlock | null];
       const acquisitionBlock = blockData(acquisitionResult);
-      // Read the final head after the proof and owner check, so an intervening
-      // new block cannot conceal a newer receipt to the same owner.
-      const confirmedHead = blockData(await request<RpcBlock | null>('eth_getBlockByNumber', ['latest', false]));
       if (acquisitionBlock.hash.toLowerCase() !== event.blockHash.toLowerCase() ||
         quantity(acquisitionBlock.number) !== quantity(event.blockNumber) ||
-        confirmedHead.hash.toLowerCase() !== head.hash.toLowerCase() ||
-        quantity(confirmedHead.number) !== headNumber ||
         !HASH_PATTERN.test(currentOwner) || decodeAddress(currentOwner).toLowerCase() !== expectedOwner) return null;
+      // Ethereum produces a block every 12 seconds, so the head often advances
+      // during these reads; that is not a failure as long as the pinned head is
+      // still canonical and the new blocks contain no Transfer of this token. A
+      // reorg (the pinned block hash no longer canonical) or a newer Transfer
+      // fails closed.
+      const confirmedHead = blockData(confirmedResult);
+      const confirmedNumber = quantity(confirmedHead.number);
+      let verifiedAtBlock = headNumber;
+      if (confirmedHead.hash.toLowerCase() !== head.hash.toLowerCase() || confirmedNumber !== headNumber) {
+        if (confirmedNumber <= headNumber) return null;
+        const pinned = blockData(await request<RpcBlock | null>('eth_getBlockByNumber', [head.number, false]));
+        if (pinned.hash.toLowerCase() !== head.hash.toLowerCase()) return null;
+        const newer = latestTransfer(await getLogs(headNumber + 1, confirmedNumber), tokenTopic, headNumber + 1, confirmedNumber);
+        if (newer) return null;
+        verifiedAtBlock = confirmedNumber;
+      }
       const timestamp = quantity(acquisitionBlock.timestamp);
       if (timestamp > quantity(head.timestamp) || timestamp > Date.now() / 1_000 + 60) return null;
       return {
@@ -326,7 +369,7 @@ export async function readAcquisition(tokenId: number, owner: string): Promise<A
         blockNumber: quantity(event.blockNumber),
         blockHash: event.blockHash,
         owner: expectedOwner,
-        verifiedAtBlock: headNumber,
+        verifiedAtBlock,
       };
     } catch {
       // Failure never promotes an incomplete log search to a date estimate.

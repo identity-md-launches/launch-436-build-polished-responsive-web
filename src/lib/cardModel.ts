@@ -33,60 +33,69 @@ export interface CardModel {
 export const STATE_LABEL: Record<CardState, string> = {
   working: 'Working',
   ready: 'Online · ready',
-  online: 'Online · paused',
+  online: 'Online',
   offline: 'Offline',
   unknown: 'Status unavailable',
 };
 
 export function buildCardModel(profile: AgentProfile, shareUrl: string): CardModel {
-  const seat = profile.seat.value;
+  const { stats, agentId } = profile;
   const art = profile.artwork.value;
   const palette = art?.palette ?? DEFAULT_PALETTE;
 
   const ownerLabel =
-    profile.ens.value?.name ?? profile.publicHandle.value ?? (profile.owner.address ? shortAddress(profile.owner.address) : 'Unavailable');
+    profile.ens.value?.name ?? profile.publicHandle.value ?? (profile.owner.value ? shortAddress(profile.owner.value) : 'Unavailable');
 
   const latestRuntime = profile.runtime.value?.[0];
   const runtime = latestRuntime ? `${latestRuntime.id}${latestRuntime.version ? ` ${latestRuntime.version}` : ''}` : null;
 
-  const verified = profile.seat.source === 'live' && seat?.status === 'active' && !!seat.agentId;
+  // "Verified" means the live network view lists this NFT as an enrolled agent right now.
+  const verified = agentId.source === 'live' && !!agentId.value;
   const verification = verified
     ? 'Verified agent'
-    : profile.seat.source === 'snapshot' && seat?.agentId
-      ? 'Agent · snapshot'
-      : profile.seat.source === 'unavailable' && profile.seat.note?.includes('paired')
-        ? 'Not paired'
-        : 'Verification unavailable';
+    : profile.presence.source === 'explorer' || stats.attempts.source === 'explorer'
+      ? 'Agent · Explorer'
+      : agentId.source === 'snapshot' && agentId.value
+        ? 'Agent · snapshot'
+        : agentId.note?.includes('not paired')
+          ? 'Not paired'
+          : 'Verification unavailable';
 
   const lastActivityIso = profile.lastActivity.value;
+  const accepted = stats.accepted.value, attempts = stats.attempts.value;
+  const workSource = stats.attempts.source;
 
   const fields: CardField[] = [
-    { label: 'Agent ID', value: seat?.agentId ?? 'Unavailable', unavailable: !seat?.agentId },
-    { label: 'Accepted', value: seat?.accepted != null ? formatInt(seat.accepted) : 'Unavailable', unavailable: seat?.accepted == null },
-    { label: 'Attempts', value: seat?.attempts != null ? formatInt(seat.attempts) : 'Unavailable', unavailable: seat?.attempts == null },
+    { label: 'Agent ID', value: agentId.value ?? 'Unavailable', unavailable: !agentId.value },
+    { label: 'Accepted', value: accepted != null ? formatInt(accepted) : 'Unavailable', unavailable: accepted == null },
+    { label: 'Attempts', value: attempts != null ? formatInt(attempts) : 'Unavailable', unavailable: attempts == null },
     {
       label: 'Acceptance',
-      value: seat?.accepted != null && seat.attempts != null && seat.attempts > 0 ? percent(seat.accepted, seat.attempts) : 'Unavailable',
-      unavailable: !(seat?.accepted != null && seat.attempts != null && seat.attempts > 0),
+      value: accepted != null && attempts != null && attempts > 0 ? percent(accepted, attempts) : 'Unavailable',
+      unavailable: !(accepted != null && attempts != null && attempts > 0),
     },
     { label: profile.runtime.source === 'snapshot' ? 'Runtime · snapshot' : 'Runtime', value: runtime ?? 'Unavailable', unavailable: !runtime },
     { label: 'Owner', value: ownerLabel, unavailable: ownerLabel === 'Unavailable' },
   ];
+
+  const stateLabel = profile.cardState === 'unknown' && lastActivityIso && profile.lastActivity.source !== 'snapshot'
+    ? `Last active ${relativeTime(lastActivityIso)}`
+    : STATE_LABEL[profile.cardState];
 
   return {
     tokenId: profile.tokenId,
     number: `#${profile.tokenId}`,
     name: art?.name || `identity.md #${profile.tokenId}`,
     state: profile.cardState,
-    stateLabel: STATE_LABEL[profile.cardState],
+    stateLabel,
     verification,
     verified,
     fields,
     network: CHAIN_NAME,
     lastActivity: lastActivityIso ? `${relativeTime(lastActivityIso)}${profile.lastActivity.source === 'snapshot' ? ' · snapshot' : ''}` : 'Unavailable',
-    dataLabel: profile.seat.source === 'snapshot' && profile.seat.at
-      ? `Work snapshot · ${profile.seat.at.slice(0, 16).replace('T', ' ')} UTC`
-      : profile.seat.source === 'live' ? 'Work data · live API' : 'Work data · unavailable',
+    dataLabel: workSource === 'snapshot' && stats.attempts.at
+      ? `Work snapshot · ${stats.attempts.at.slice(0, 16).replace('T', ' ')} UTC`
+      : workSource === 'live' ? 'Work data · live IMD' : workSource === 'explorer' ? 'Work data · Explorer' : 'Work data · unavailable',
     palette,
     image: art?.image ?? null,
     imageAlt: art ? `Original onchain artwork for ${art.name || `identity.md #${profile.tokenId}`}` : '',

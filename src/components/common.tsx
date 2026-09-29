@@ -13,10 +13,11 @@ export function StatusBadge({ state, label }: { state: CardState; label?: string
   );
 }
 
-const SOURCE_LABEL: Record<Provenance, string> = {
-  live: 'Live API',
+export const SOURCE_LABEL: Record<Provenance, string> = {
+  live: 'Live IMD',
+  explorer: 'Explorer',
   onchain: 'Onchain',
-  snapshot: 'API snapshot',
+  snapshot: 'Snapshot',
   unavailable: 'Unavailable',
 };
 
@@ -26,6 +27,24 @@ export function SourceTag({ source, at, note }: { source: Provenance; at?: strin
     <span className={`source-tag source-tag--${source}`} title={title}>
       {SOURCE_LABEL[source]}
       {source === 'snapshot' && at ? <span className="visually-hidden"> taken {formatDateTime(at)}</span> : null}
+    </span>
+  );
+}
+
+/**
+ * "Live · updated 4 s ago". Plain text on purpose: it changes every second,
+ * so it is not a live region. Failures are worded for people, not logs.
+ */
+export function LiveIndicator({ at, ok, now, compact = false }: { at: string | null; ok: boolean; now: number; compact?: boolean }) {
+  const seconds = at ? Math.max(0, Math.round((now - Date.parse(at)) / 1000)) : null;
+  const age = seconds === null ? null : seconds < 60 ? `${seconds} s ago` : seconds < 3600 ? `${Math.round(seconds / 60)} min ago` : `${Math.round(seconds / 3600)} h ago`;
+  const state = !at ? 'waiting' : ok ? 'ok' : 'retrying';
+  const label = state === 'waiting' ? 'Live · waiting for the first update'
+    : state === 'ok' ? `Live · updated ${age}` : `Live · retrying · last update ${age}`;
+  return (
+    <span className={`live-indicator live-indicator--${state}`} title={at ? `Last live read ${formatDateTime(at)}${ok ? '' : '. The newest attempt did not complete; earlier values are kept.'}` : undefined}>
+      <span className="live-indicator__dot" aria-hidden="true" />
+      {compact && state === 'ok' ? `Live · ${age}` : label}
     </span>
   );
 }

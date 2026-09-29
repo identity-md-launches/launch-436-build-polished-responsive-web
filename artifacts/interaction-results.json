@@ -1,153 +1,84 @@
 {
-  "date": "2026-09-29T18:42:06.403Z",
-  "base": "http://127.0.0.1:34563/preview/",
-  "dist": "/tmp/simcard-validation/dist",
+  "date": "2026-09-29T20:08:58.779Z",
+  "base": "http://127.0.0.1:39103/preview/",
+  "dist": "/home/seat/.identitymd/work/0b68e3f0-7681-4f52-8a08-05caaf5fb27d/ae52e9d9-51bb-4173-88d2-dda490523166/dist",
+  "bundle": "assets/index-Von05rbi.js",
   "results": [
     {
-      "name": "Invalid search announces error and focuses the input"
+      "name": "Token 222 renders real recorded data: swarm statistics, onchain owner/ENS/artwork, live indicator",
+      "fields": [
+        "AGENT ID: 50963",
+        "ACCEPTED: 486",
+        "ATTEMPTS: 586",
+        "ACCEPTANCE: 82.9%",
+        "RUNTIME · SNAPSHOT: codex codex-cli 0.155.1",
+        "OWNER: bkm01.eth"
+      ],
+      "status": "LAST ACTIVE 3 H AGO Live · updated 2 s ago Work data LIVE IMD Presence LIVE IMD Artwork ONCHAIN"
     },
     {
-      "name": "Token search exposes loading state"
+      "name": "Dashboard cards: Held for from the real Transfer (block 25755404), rankings from the complete /swarm cohort, per-card source labels",
+      "identity": "Identity | ONCHAIN | Sep 29, 2026, 20:08 UTC | CURRENT OWNER | bkm01.eth | ENS forward-verified | Owner wallet | 0xaf3c…70f9 | Copy | Agent ID | 50963 | LIVE IMD | Explorer handle | bkm01.eth | SNAPSHOT | TAKEN SEP 29, 2026, 18:35 UTC | Owner holds | 1 seat | LIVE IMD | Held for | 46 days | Acquired",
+      "rankings": "Rankings | LIVE IMD | Sep 29, 2026, 20:08 UTC | Accepted-work rank | #303 | of 543 enrolled agents | Percentile | 44% | By accepted work | Attempts rank | #260 | Acceptance-rate rank | #520 | of 533 eligible agents | Tie"
     },
     {
-      "name": "Search route, copy link and X intent keep token 222 and /preview/ subpath"
+      "name": "10-second poll re-reads only /swarm; blocked endpoints are skipped; indicator resets",
+      "polled": [
+        "api.imd.fun/swarm"
+      ],
+      "indicator": "Live · updated 4 s ago"
     },
     {
-      "name": "Real PNG export is 1600 × 1000 and its decoded QR opens the current profile",
-      "bytes": 1313501
+      "name": "Escape closes the profile and returns focus to Open profile"
     },
     {
-      "name": "Real MediaRecorder video export decodes at 1280 × 800",
-      "width": 1280,
-      "height": 800,
-      "duration": 5.989133,
-      "bytes": 1213019
-    },
-    {
-      "name": "Rendered opaque dashboard text pairs meet measured contrast thresholds",
-      "samples": 89,
-      "minimum": 4.88,
-      "unverified": 0
-    },
-    {
-      "name": "axe-core automated profile check reports no WCAG A/AA violations",
-      "incomplete": [
-        {
-          "id": "color-contrast",
-          "nodes": 158
-        }
+      "name": "Token 1 renders: owner 0xfinne.eth holding 18 seats, acquisition Sep 15 2026 (block 25985738), rank #188",
+      "fields": [
+        "AGENT ID: 50953",
+        "ACCEPTED: 733",
+        "ATTEMPTS: 813",
+        "ACCEPTANCE: 90.2%",
+        "RUNTIME · SNAPSHOT: claude 2.1.281 (Claude Code)",
+        "OWNER: 0xfinne.eth"
       ]
     },
     {
-      "name": "Verification links are collapsed by default and available by keyboard"
+      "name": "Failed poll after a good read: values retained, indicator shows retrying, note explains without error text",
+      "indicator": "Live · retrying · last update 13 s ago"
     },
     {
-      "name": "Show more jobs reveals the remaining recent work"
+      "name": "/swarm unavailable: Explorer supplies stats and presence, /seats/records supplies rankings, chain values untouched"
     },
     {
-      "name": "Profile animation pause/resume works"
+      "name": "Ethereum unreachable: owner from Live IMD, artwork and Held for unavailable, everything else shown"
     },
     {
-      "name": "Profile keyboard opening, native focus containment and Escape focus restoration"
+      "name": "All public APIs unavailable: snapshot statistics and rankings, presence never inferred from the snapshot"
     },
     {
-      "name": "Profile/card reflow at 320px",
-      "dims": {
-        "viewport": 320,
-        "body": 320,
-        "dialog": [
-          {
-            "width": 320,
-            "scroll": 320
-          }
-        ]
-      },
-      "grid": [
-        "288px"
+      "name": "Unminted token (ownerOf reverts) shows the missing-NFT state with search"
+    },
+    {
+      "name": "Search validation, Enter navigation, share link and X intent keep token 222 and the hosting subpath"
+    },
+    {
+      "name": "No horizontal overflow at 320px on the page or inside the profile dialog"
+    },
+    {
+      "name": "No horizontal overflow at 390px on the page or inside the profile dialog"
+    },
+    {
+      "name": "prefers-reduced-motion renders a static card and disables the pause control"
+    },
+    {
+      "name": "Rendered contrast of provenance labels, live indicator and dashboard text meets WCAG AA on their opaque backdrops",
+      "samples": 17,
+      "minimum": 6.77,
+      "missing": [
+        "dialog .live-events__head .profile-eyebrow"
       ]
-    },
-    {
-      "name": "Profile/card reflow at 390px",
-      "dims": {
-        "viewport": 390,
-        "body": 390,
-        "dialog": [
-          {
-            "width": 390,
-            "scroll": 390
-          }
-        ]
-      },
-      "grid": [
-        "358px"
-      ]
-    },
-    {
-      "name": "Profile/card reflow at 820px",
-      "dims": {
-        "viewport": 820,
-        "body": 820,
-        "dialog": [
-          {
-            "width": 780,
-            "scroll": 780
-          }
-        ]
-      },
-      "grid": [
-        "740px"
-      ]
-    },
-    {
-      "name": "Profile/card reflow at 1280px",
-      "dims": {
-        "viewport": 1280,
-        "body": 1280,
-        "dialog": [
-          {
-            "width": 1214,
-            "scroll": 1214
-          }
-        ]
-      },
-      "grid": [
-        "565px 565px"
-      ]
-    },
-    {
-      "name": "Refresh bypasses cache and replaces working state with offline state"
-    },
-    {
-      "name": "Reduced motion disables card orbit, pulse and scan animations"
-    },
-    {
-      "name": "Required public sources requested; no runtime errors or local asset failures"
-    },
-    {
-      "name": "Official API network/CORS failure uses timestamped bundled snapshot and unavailable live values",
-      "snapshotAt": "2026-09-29T18:34:26.258Z"
-    },
-    {
-      "name": "Transfer log failure still opens profile without a made-up acquisition date"
-    },
-    {
-      "name": "Incomplete API fields stay unavailable instead of fabricated zero/offline values"
-    },
-    {
-      "name": "One configured trusted base URL routes API and Explorer reads"
-    },
-    {
-      "name": "Malformed percent-encoded route gives invalid-token state without crashing"
-    },
-    {
-      "name": "Invalid direct hash route gives recoverable error state"
-    },
-    {
-      "name": "Nonexistent token has a retry/search error state"
-    },
-    {
-      "name": "Ethereum network error recovers through Try again"
     }
   ],
-  "errors": []
+  "consoleErrors": [],
+  "status": "passed"
 }

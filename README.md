@@ -2,11 +2,13 @@
 
 **One card. Every agent. Verified onchain.**
 
-An existing React + TypeScript + Vite site, improved with a readable IdentityMD agent dashboard. Search an NFT token ID, open its profile, refresh public data, download a PNG or animated video, or share its profile on X. No wallet connection or credentials are required.
+A React + TypeScript + Vite site that turns any identity.md NFT token ID into an animated SIMCARD and a readable agent dashboard. Search a token, open its profile, download a PNG or animated video, or share it on X. Read-only: no wallet connection, no keys, no backend.
+
+This version repairs the data layer. The browser now reads the public live IdentityMD sources that actually answer browsers, merges every source field by field, refreshes live values every 10 seconds, and labels each section with where its data came from.
 
 ## Install, preview and rebuild
 
-Use Node.js 22+ and the existing dependency lockfile:
+Use Node.js 22+ and the existing lockfile:
 
 ```sh
 npm ci
@@ -21,38 +23,46 @@ npm run build
 npm run preview -- --host 127.0.0.1
 ```
 
-`dist/` is the ready-to-publish production export. To preview it without installing dependencies, run `python3 -m http.server 4173 --directory dist` and open `http://127.0.0.1:4173/`. Serve over HTTP, rather than opening `index.html` as a file.
+`dist/` is the ready-to-publish production export. To preview it without installing dependencies, run `python3 -m http.server 4173 --directory dist` and open `http://127.0.0.1:4173/`. Serve it over HTTP rather than opening `index.html` as a file.
 
-For this assignment, dependencies were installed only in a temporary mirror under `/tmp`; the repository's package manifests, lockfile and build configuration were preserved. The same unmodified `npm run typecheck` and `npm run build` scripts ran against exact source/config copies. No dependency/cache directory belongs in the submission.
+For this assignment, dependencies were installed only in a temporary mirror under `$TMPDIR`; the repository's package manifests, lockfile and build configuration are unchanged. The unmodified `npm run typecheck` and `npm run build` scripts ran against an exact copy of the source, and the resulting `dist/` was copied back.
 
 ## Publish to static hosting / IPFS
 
-Publish **the contents of `dist/`**, including `index.html`, `assets/`, `snapshot/`, favicon and social image. Vite retains `base: './'`; runtime assets and snapshots use relative URLs. No server, rewrite rule, proxy or wallet is required to serve the export. Publish the rebuilt export alongside source and the existing lockfile; this project's publisher serves the supplied files and does not rebuild them.
+Publish **the contents of `dist/`**: `index.html`, `assets/`, `snapshot/`, favicon and social image. Vite uses `base: './'`, so every asset and snapshot URL is relative and the export works at a gateway subpath or an ENS name. No server, rewrite rule, proxy or wallet is needed. The publisher serves the committed export and does not rebuild it.
 
-Routes are hashes, for example `https://your-gateway.example/ipfs/<CID>/#/agent/222`. QR, copy-link and X sharing preserve the current hosting path and token ID. The existing site is `site-9c1c8867.site.identitymd.eth`; this task prepares its next version but does not publish it or change anything onchain. Static social metadata remains site-wide, since hash routes cannot provide separate server-rendered previews.
+Routes are hashes, for example `https://your-gateway.example/ipfs/<CID>/#/agent/222`. QR, copy-link and X sharing keep the current hosting path and token ID. The existing site is `site-9c1c8867.site.identitymd.eth`; this job prepares its next version and changes nothing onchain.
 
-## Dashboard and data
+## Data sources and priority
 
-Open profile keeps the original animated SIMCARD above eight separate cards: Identity, Live status, Performance, Rankings, Rewards and launch allocations, Work history, Reviews, and a collapsed Verification card. Desktop uses two columns; mobile uses one. Missing values use small Unavailable badges. Source labels and snapshot timestamps remain visible without opening JSON.
+Every profile merges these sources **field by field**. A failed request never blanks a value another source supplied. Priority, highest first:
 
-Every load and Refresh requests these official public sources independently:
+1. **Live IMD** — `https://api.imd.fun/swarm`. Answers browsers (`Access-Control-Allow-Origin: *`) and is cached about 10 seconds server-side. The requested seat is found by token ID for agent ID, attempts, accepted, rejected, failed, pending, last activity, working/queued state and the owner list; the whole document is the complete cohort for rankings.
+2. **Explorer** — `https://explorer.imd.fun/api/agents/{tokenId}`: online status, owner, ownerName, `held` (the number of seats the owner holds), attempts, accepted, jobs, lastAcceptedAt.
+3. **Onchain** — Ethereum through public JSON-RPC: `ownerOf`, `tokenURI` (artwork and palette), identity hash, ENS reverse/forward check, and the ERC-721 Transfer history.
+4. **Last valid live read** — kept in memory when a refresh fails, shown with its original time.
+5. **Snapshot** — the bundled `public/snapshot/*.json` capture (dated in the UI).
+6. **Unavailable** — only for the individual field that no source supplied.
 
-- `https://api.imd.fun/seats/:tokenId`
-- `https://api.imd.fun/seats/:tokenId/standing`
-- `https://api.imd.fun/seats/records`
-- `https://api.imd.fun/wallets/:ownerAddress/earnings`
-- `https://explorer.imd.fun/api/agents/:tokenId` and its public `/agents/:tokenId` page
-- Ethereum `ownerOf`, `tokenURI`, identity metadata, ENS and ERC-721 Transfer logs.
+`https://api.imd.fun/seats/records` is requested only when `/swarm` fails, as a fallback for statistics and rankings. `/seats/{id}`, `/seats/{id}/standing` and `/wallets/{owner}/earnings` are still tried once per full load for work history, reviews, heartbeat and allocations; on 2026-09-29 they sent no CORS header, so browsers fall back to the snapshot for those cards. An endpoint that the browser could not reach is left out of polls for five minutes; Refresh retries everything.
 
-**Held for** comes exclusively from the latest Transfer of the specific NFT in `0x0000ec93127baa929e58e97dd0095a2bfb38ec1d`, matched against its current owner. The block timestamp supplies the readable duration and exact UTC acquisition date; Verification links the transaction. Pairing time, Explorer `held`, API timestamps and general contract activity are never substitutes. Chain identity, ownership, event fields and canonical block/head hashes are checked. The bounded history search returns Unavailable if logs are incomplete, providers fail, ownership changes or the chain head advances during verification. Refresh retries it.
+**Ownership, artwork and acquisition are onchain-first.** "Held for" is computed from the latest ERC-721 Transfer in which the current owner received this exact token, verified against `ownerOf` at a pinned block, with the pinned head re-checked for reorgs and newer transfers. It never uses the build date, the snapshot date, the pairing date or the Explorer's `held` count. Public RPC endpoints differ in log history: on 2026-09-29 `rpc.mevblocker.io` served the whole range, `rpc.flashbots.net` served 50,000-block windows and `publicnode` only recent blocks, so `src/data/config.ts` keeps a separate ordered list for log queries. If no endpoint can prove the Transfer, "Held for" shows Unavailable and Refresh retries.
 
-Work counts retain null for missing values, distinguishing unknown from zero. Acceptance is **accepted / all attempts**, including pending work; this can differ from the Explorer's judged-work denominator. Ties share ranks. Acceptance-rate ranks require 20 attempts, and rankings require a complete records cohort. Percentile is the proportion of other recorded agents with fewer accepted jobs. Wallet allocations can cover multiple agents and networks; their amounts are not aggregated across unlike tokens or described as confirmed payouts. Payouts remain Unavailable because these public responses do not establish them. Paginated allocation counts are labeled as the captured page rather than lifetime totals.
+**Rankings** are computed client-side from the complete cohort: rank by accepted work, by attempts, by acceptance rate (20+ attempts), and percentile (share of agents with fewer accepted jobs). Ties share a rank.
 
-## CORS, snapshots and a future first-party proxy
+**Presence** comes only from live sources: `working` from `/swarm`, `online` from the Explorer, or the standing heartbeat when reachable. Snapshot online flags never decide the badge; when no live source reports presence the badge shows the latest live activity time instead.
 
-During this task the official API and Explorer omitted browser CORS headers. The frontend still retries the official origins; it uses **no public CORS proxy**. Successful sources remain usable when a sibling endpoint fails. Public Ethereum data supplies verified ownership/artwork; bundled snapshots supply dated work records, rankings, runtime, recent work/reviews and wallet allocation records. Presence is never inferred from snapshot online flags.
+## Live refresh
 
-The bundled snapshot started at **2026-09-29 18:34:26 UTC**: 540 recorded seats (all enriched with up to three recent jobs and reviews), 230 wallet summaries, and up to six allocations per wallet. Seat detail timestamps are separate. Objectives are compact 180-character excerpts with links to full public jobs. Snapshot values do not update themselves on IPFS; refresh the files and republish to advance this fallback:
+Live values refresh every 10 seconds while the tab is visible (`LIVE_REFRESH_MS` in `src/data/config.ts`). Each poll re-reads `/swarm` (and the Explorer when reachable); Ethereum, artwork, ENS, acquisition and the snapshot are read on load and on Refresh only. The "Live · updated X s ago" indicator on the page and in the profile shows the last successful live read; during a failed refresh it turns to "Live · retrying · last update X s ago" and the previous values stay on screen.
+
+## Source labels
+
+Every dashboard card carries one of **Live IMD**, **Explorer**, **Onchain** or **Snapshot** with its observation time. A value that came from a different source than its card shows its own small label. Failures are described in plain words; no technical error text reaches the page.
+
+## Snapshot fallback
+
+The bundled snapshot started at **2026-09-29 18:34:26 UTC**: 540 recorded seats with up to three recent jobs and reviews each, 230 wallet summaries. To refresh it and republish:
 
 ```sh
 npm run snapshot -- --concurrency 6
@@ -60,40 +70,24 @@ npm run typecheck
 npm run build
 ```
 
-The script reads only public endpoints. A partial `--limit` snapshot is unsuitable for rankings and is marked incomplete. Its source files are in `public/snapshot/` and copied into `dist/snapshot/` by Vite.
-
-The footer's Data source settings accepts **one trusted first-party HTTPS base URL**, stored in `localStorage` as `simcard:apiBase`. Leave it empty for official origins. A future proxy at `https://first-party.example/public` must forward:
-
-| Requested path | Official upstream |
-| --- | --- |
-| `/public/seats/*` | `https://api.imd.fun/seats/*` |
-| `/public/wallets/*` | `https://api.imd.fun/wallets/*` |
-| `/public/explorer/*` | `https://explorer.imd.fun/*` |
-
-It must return upstream response bodies/statuses and permit the frontend origin through CORS. This static export does not include or operate that service. Credentials, query strings and fragments are rejected in the setting. Public verification links always point to the official sites.
-
-If Ethereum itself cannot be read, the site shows a network error with Try again instead of claiming snapshot ownership is current. Public provider range limits can leave acquisition Unavailable even while other onchain reads work.
+The footer's Data source settings still accepts one trusted first-party HTTPS base URL (`localStorage` key `simcard:apiBase`) that forwards `/seats/*`, `/wallets/*` and `/explorer/*` to the official origins. `/swarm` is always read from the official origin first. No public CORS relay is used.
 
 ## Export behavior
 
-PNG uses the existing 1600×1000 canvas renderer. Video records roughly six seconds at 1280×800 using a supported browser MediaRecorder format (MP4 or WebM). It requires a browser that can record canvas video; an unsupported browser retains PNG export and shows an explanation. The source timestamp is included for snapshot work data. X's web intent supplies a caption and profile URL; attach downloaded media manually. Onscreen Pause and reduced motion do not disable an explicitly requested video export.
+PNG uses the 1600×1000 canvas renderer. Video records roughly six seconds at 1280×800 with the browser's MediaRecorder (MP4 or WebM). X's web intent carries a caption and the profile URL; attach downloaded media manually.
 
 ## Validation performed on 2026-09-29
 
-Final production build and typecheck: **exit 0**. The final `dist/` was tested at the static `/preview/` subpath; source/config mirror parity was checked.
+Final production build and typecheck: **exit 0** (`vite build` 6.4.3, `tsc --noEmit`).
 
-- **26 browser checks passed**: search/invalid input/loading, direct and malformed hash routes, clipboard/X URL, native modal/Escape/reopen, disclosures, recent-work expansion, pause/reduced motion, Refresh, partial and unavailable sources, one proxy base, missing NFT and network recovery.
-- **19 acquisition/RPC regression tests passed**, including latest log ordering, contiguous scans, different token/contract, reorgs, ownership/head changes and partial RPC errors.
-- **31 data assertions passed**: missing versus zero, presence, ranking ties/cohort completeness, allocation pagination and identity matching.
-- Real PNG and video encoding/downloads passed with fixture records. The PNG's QR decoded to the exact current profile URL; the video decoded at 1280×800 with 5.989 seconds duration.
-- No horizontal overflow at 320, 390, 820 or 1280px. Screenshot review also covered 1440px and final 320px snapshot cards. Measured opaque dashboard text samples met their contrast thresholds; see the full coverage record.
+- **Live data-layer test (Node, real network)** for tokens **222 and 1**: full load, poll, `/swarm` blocked with last-good retention, `/swarm` + Explorer blocked, browser-realistic (only `/swarm` and RPC answer), browser-realistic with `/swarm` down, and Ethereum blocked. All assertions passed on both tokens. Real acquisitions resolved: token 222 received by its owner on 2026-08-14 (block 25,755,404), token 1 on 2026-09-15 (block 25,985,738).
+- **15 headless-Chromium checks** on the final export, served under `/preview/` and fed the **recorded real responses** of those runs (the sandboxed browser has no internet): rendering for 222 and 1, dashboard values and labels, 10-second poll behaviour, retained values during a failed poll, the no-swarm / no-chain / full-outage scenarios, missing NFT, search and share, no horizontal overflow at 320 and 390 px, reduced motion, and rendered contrast sampling. Results are in `artifacts/interaction-results.json`; screenshots and contrast samples are in `artifacts/`.
+- Zero console errors or failed local asset loads in those runs.
 
-**Limits:** worker and browser requests to the three real RPC endpoints were blocked (HTTP 403/network failures); the actual acquisition date and real live onchain export could not be certified here. Live-state browser tests used explicit synthetic API/RPC fixtures; the bundled API snapshot is real. Screenshots marked `fixture` use synthetic artwork/data. Screen-reader sessions, native 200% zoom, physical devices, Safari/Firefox and a published IPFS round trip were not performed. Axe's inconclusive contrast nodes are recorded, not counted as passes.
-
-The six-domain Better Interface review, findings/fixes, actual commands, screenshots and limitations are in [artifacts/validation.md](artifacts/validation.md); the implemented design is in [DESIGN.md](DESIGN.md). Temporary test scaffolding and generated download samples were kept in `test/scratch/` and are deliberately not submitted.
+**Limits:** the real Explorer, `/seats/*` and `/wallets/*` responses carried no CORS header on 2026-09-29, so in a real browser those values come from the snapshot until the origin enables CORS or a first-party base is configured; the "all endpoints answer" behaviour was verified from Node and the harness, not from a live browser. `rpc.mevblocker.io` rate-limits bursts (HTTP 429 was observed during repeated test runs); the site batches and retries, but "Held for" can still show Unavailable until Refresh. No physical devices, screen readers, Safari/Firefox, native zoom or a published IPFS round trip were tested. The full review record is in [artifacts/validation.md](artifacts/validation.md); the design system is in [DESIGN.md](DESIGN.md).
 
 ## Source map and attribution
 
-`src/data/` handles provenance, public endpoints, snapshots and onchain reads. `src/components/ProfileDialog.tsx` and `src/styles/profile.css` define the dashboard; `src/lib/` retains shared card/export logic. `public/` supplies locally bundled assets and snapshots; `dist/` is the complete static export.
+`src/data/imdApi.ts` holds the typed clients (swarm, Explorer, seat, standing, records, earnings). `src/data/profile.ts` merges sources with provenance and keeps last-good live values. `src/data/chain.ts` reads Ethereum and proves acquisition. `src/lib/hooks.ts` owns loading and the 10-second poll. `src/components/ProfileDialog.tsx` and `src/styles/profile.css` define the dashboard; `src/components/common.tsx` the source labels and live indicator. `dist/` is the complete static export.
 
-Design review used Jakub Krehel's Better Interface (MIT), with Paul Bakaus's Impeccable documentation guidance (Apache-2.0). Their pinned license texts are retained in `artifacts/licenses/better-interface-LICENSE`. JetBrains Mono is bundled under SIL OFL through the existing font dependency. IdentityMD branding and NFT artwork belong to their respective owners; SIMCARD is a community tool.
+Design review used Jakub Krehel's Better Interface (MIT) with Paul Bakaus's Impeccable documentation guidance (Apache-2.0); license texts are in `artifacts/licenses/better-interface-LICENSE`. JetBrains Mono is bundled under SIL OFL. IdentityMD branding and NFT artwork belong to their owners; SIMCARD is a community tool.

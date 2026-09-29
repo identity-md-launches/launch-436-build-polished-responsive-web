@@ -47,6 +47,10 @@
 .ownership-metrics dd { font-size: 1.25rem; }
 .ownership-metrics .metric--prominent dd { font-size: 1.75rem; }
 .live-status { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.profile-overview__toolbar .cluster { align-items: center; }
+.dashboard-card .kv dd .source-tag, .metric dd .source-tag { margin-inline-start: .35rem; vertical-align: middle; font-weight: 400; letter-spacing: .04em; }
+.live-events { display: grid; gap: .75rem; padding-bottom: 1rem; border-bottom: 1px solid var(--color-border-subtle); }
+.live-events__head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 1rem; align-items: center; }
 .unavailable--badge { display: inline-block; color: var(--color-text-muted); background: var(--color-bg-graphite); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-sm); padding: .2rem .45rem; font-size: .75rem; font-style: normal; font-weight: 400; line-height: 1.5; letter-spacing: 0; white-space: nowrap; vertical-align: middle; }
 .empty-data { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; color: var(--color-text-muted); font-size: var(--text-sm); }
 .activity-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
